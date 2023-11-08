@@ -1,0 +1,9 @@
+jax
+jaxlib
+flax
+numpy
+torch
+torchvision
+tqdm
+optax
+matplotlib

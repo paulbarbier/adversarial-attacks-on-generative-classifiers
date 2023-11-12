@@ -1,0 +1,92 @@
+# encoder
+
+the first part is a sequence of conv layers and everything is outlined in encoder_convolution_architecture.png
+second part is a mlp:
+input_size, output_size, activation 
+enc (510, 500, 'relu')
+enc (500, 128, 'linear')
+
+# GFZ Experimentation
+
+## decoder
+
+p(y | z)
+
+input_size, output_size, activation
+('p(y|z) mlp', 64, 500, 'relu')
+('p(y|z) mlp', 500, 10, 'linear')
+
+p(x|z, y)
+
+input_size, output_size, activation
+('p(x|z, y) mlp', 74, 500, 'relu')
+('p(x|z, y) mlp', 500, 1024, 'relu')
+
+output_shape, filter_shape, activation
+('deconv p(x|z, y)', (7, 7, 64), (5, 5, 64, 64), 'relu')
+('deconv p(x|z, y)', (14, 14, 64), (5, 5, 64, 64), 'relu')
+('deconv p(x|z, y)', (28, 28, 1), (5, 5, 1, 64), 'sigmoid')
+
+##
+
+K = 1
+ll = l2
+
+dimZ = 64
+dimH = 500
+n_iter = 100
+batch_size = 50
+lr = 1e-4
+K = 1
+checkpoint = -1
+
+ADAM
+
+
+n_iter = 100
+n_iter_ = min(n_iter,20) --> nombre d'iteration de fit = n_iter / n_iter_ !!!num epochs
+beta = 1.0
+
+def lowerbound:
+
+    if z is None:
+            z, logq = encoding(enc_mlp, fea, y, K, use_mean, fix_samples, seed)
+    else:
+        mu_qz, log_sig_qz = enc_mlp(fea, y)
+        logq = log_gaussian_prob(z, mu_qz, log_sig_qz)
+
+    y_logit = pyz(z)
+    log_pyz = -tf.nn.softmax_cross_entropy_with_logits(labels=y_rep, logits=y_logit)
+    log_prior_z = log_gaussian_prob(z, 0.0, 0.0)
+    mu_x = pxzy(z, y_rep)
+    ind = list(range(1, len(x_rep.get_shape().as_list())))
+    logp = -tf.reduce_sum((x_rep - mu_x)**2, ind)
+
+    bound = logp * beta + log_pyz + (log_prior_z - logq)
+
+    if IS and K > 1:	# importance sampling estimate
+        N = x.get_shape().as_list()[0]
+        bound = tf.reshape(bound, [K, N])
+        bound = logsumexp(bound) - tf.log(float(K))
+
+def log_gaussian_prob(x, mu=0.0, log_sig=0.0):
+    logprob = -(0.5 * np.log(2 * np.pi) + log_sig) \
+                - 0.5 * ((x - mu) / tf.exp(log_sig)) ** 2
+    ind = list(range(1, len(x.get_shape().as_list())))
+    return tf.reduce_sum(logprob, ind) 
+
+
+for classification K = 10 and IS == 1
+
+def bayes_classifier(x, enc, dec, ll, dimY, lowerbound, K = 1, beta=1.0):
+    enc_conv, enc_mlp = enc
+    fea = enc_conv(x)
+    N = x.get_shape().as_list()[0]
+    logpxy = []
+    for i in range(dimY):
+        y = np.zeros([N, dimY]); y[:, i] = 1; y = tf.constant(np.asarray(y, dtype='f'))
+        bound = lowerbound(x, fea, y, enc_mlp, dec, ll, K, IS=True, beta=beta)
+        logpxy.append(tf.expand_dims(bound, 1))
+    logpxy = tf.concat(logpxy, 1)
+    pyx = tf.nn.softmax(logpxy)
+    return pyx 

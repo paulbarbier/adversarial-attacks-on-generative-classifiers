@@ -4,6 +4,7 @@ jax
 matplotlib
 ml_collections
 numpy
+orbax
 objax
 optax
 torch

@@ -8,7 +8,7 @@ from utils import get_data_config, prepare_test_dataset
 from optimiser import get_optimiser
 from models.ModelGFZ import init_model, update_step
 from jax import random
-import jax.nn as nn
+from jax.nn import one_hot
 from flax.training import train_state
 from tqdm import tqdm
 import orbax.checkpoint as ocp
@@ -61,7 +61,7 @@ def train_and_evaluate(config: ConfigDict):
             tepoch.set_description(f"Epoch {epoch}")
             for train_step, (X_batch, y_batch) in enumerate(tepoch):
                 # one-hot encoding
-                y_batch_one_hot = nn.one_hot(y_batch, dataset_config.n_classes)
+                y_batch_one_hot = one_hot(y_batch, dataset_config.n_classes)
                 
                 # sample from noise distribution
                 training_key, epsilon = sample_p(training_key, epsilon_shape)

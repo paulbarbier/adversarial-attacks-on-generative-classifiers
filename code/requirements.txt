@@ -1,9 +1,11 @@
-jax
-jaxlib
+absl_py
 flax
+jax
+matplotlib
+ml_collections
 numpy
+objax
+optax
 torch
 torchvision
 tqdm
-optax
-matplotlib

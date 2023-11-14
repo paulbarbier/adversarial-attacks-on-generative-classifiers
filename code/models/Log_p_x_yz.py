@@ -7,6 +7,7 @@ class Log_p_x_yz(nn.Module):
     n_classes: int
     d_latent: int
     d_hidden: int
+    dropout_rate: float
 
     n_channels = 64
     input_kernel = (4, 4)
@@ -14,19 +15,21 @@ class Log_p_x_yz(nn.Module):
     strides = (2, 2)
 
     @nn.compact
-    def __call__(self, X, y, z): # X: (height, width), y: (n_classes,), z: (d_latent,) -> 0
+    def __call__(self, X, y, z, train: bool = False): # X: (height, width), y: (n_classes,), z: (d_latent,) -> 0
         inputs = jnp.concatenate([y, z], 0)
         inputs = nn.Dense(
             features=self.d_hidden, 
             use_bias=True,
             kernel_init=glorot_uniform(), 
         )(inputs)
+        inputs = nn.Dropout(rate=self.dropout_rate, deterministic=not train)(inputs)
         inputs = nn.relu(inputs)
         inputs = nn.Dense(
             features=np.prod(self.input_kernel) * self.n_channels, 
             use_bias=True,
             kernel_init=glorot_uniform(), 
         )(inputs)
+        inputs = nn.Dropout(rate=self.dropout_rate, deterministic=not train)(inputs)
         inputs = nn.relu(inputs)
         
         inputs = inputs.reshape(self.input_kernel + (self.n_channels,))

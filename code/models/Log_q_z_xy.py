@@ -8,6 +8,7 @@ class Log_q_z_xy(nn.Module):
     n_classes: int
     d_latent: int
     d_hidden: int
+    dropout_rate: float
 
     n_convolutions = 3
     n_channels = 64
@@ -15,7 +16,7 @@ class Log_q_z_xy(nn.Module):
     strides = (2, 2)
 
     @nn.compact
-    def __call__(self, X, y, epsilon): # X: (height, width), y: (n_classes,), prior: (d_latent,) -> (d_latent,), 0
+    def __call__(self, X, y, epsilon, train: bool = False): # X: (height, width), y: (n_classes,), prior: (d_latent,) -> (d_latent,), 0
         for _ in range(self.n_convolutions):
             X = nn.Conv(
                 features=self.n_channels, 
@@ -31,6 +32,7 @@ class Log_q_z_xy(nn.Module):
             use_bias=True,
             kernel_init=glorot_uniform(), 
         )(X_flatten)
+        X_flatten = nn.Dropout(rate=self.dropout_rate, deterministic=not train)(X_flatten)
         X_flatten = nn.relu(X_flatten)
         
         output = jnp.concatenate((X_flatten, y), axis=0)
@@ -39,6 +41,7 @@ class Log_q_z_xy(nn.Module):
             use_bias=False,
             kernel_init=glorot_uniform(), 
         )(output)
+        output = nn.Dropout(rate=self.dropout_rate, deterministic=not train)(output)
         output = nn.relu(output)
 
         output = nn.Dense(

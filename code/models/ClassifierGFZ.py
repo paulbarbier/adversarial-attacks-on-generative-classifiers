@@ -21,24 +21,28 @@ class ClassifierGFZ(nn.Module):
     d_latent: int
     d_hidden: int
     K: int
+    dropout_rate: float
 
     @nn.compact
-    def __call__(self, X, y, epsilon): # X: (height, width), y: (n_classes,), epsilon: (d_latent,) -> 1, 1
+    def __call__(self, X, y, epsilon, train: bool = False): # X: (height, width), y: (n_classes,), epsilon: (d_latent,) -> 1, 1
         z, logit_q_z_xy = Log_q_z_xy(
             n_classes=self.n_classes,
             d_latent=self.d_latent,
             d_hidden=self.d_hidden,
-        )(X, y, epsilon)
+            dropout_rate=self.dropout_rate,
+        )(X, y, epsilon, train)
         logit_p_x_yz = Log_p_x_yz(
             n_classes=self.n_classes,
             d_latent=self.d_latent,
             d_hidden=self.d_hidden,
-        )(X, y, z)
+            dropout_rate=self.dropout_rate,
+        )(X, y, z, train)
         logit_p_y_z = Log_p_y_z(
             n_classes=self.n_classes,
             d_latent=self.d_latent,
             d_hidden=self.d_hidden,
-        )(y, z)
+            dropout_rate=self.dropout_rate,
+        )(y, z, train)
         return z, logit_q_z_xy, logit_p_x_yz, logit_p_y_z
 
 # create an instance of Classifier and init the parameters
@@ -63,12 +67,16 @@ def create_and_init(key, config: ConfigDict, dataset_config: ConfigDict) -> Clas
 # * compute grad
 # * update parameter according to defined optimiser
 @partial(jax.jit, static_argnames=['loss_single'])
-def training_step(state: TrainState, X_batch, y_batch, epsilon, loss_single):
+def training_step(state: TrainState, X_batch, y_batch, epsilon, loss_single, dropout_key):
+  # fold in a new dropout key
+  dropout_key = jax.random.fold_in(dropout_key, state.step)
+
   def batch_loss(params):
     def loss_fn(X, y, epsilon):
       z, logit_q_z_xy, logit_p_x_yz, logit_p_y_z = state.apply_fn(
         {'params': params},
-        X, y, epsilon
+        X, y, epsilon,
+        rngs={"dropout": dropout_key},
       )
       return loss_single(z, logit_q_z_xy, logit_p_x_yz, logit_p_y_z)
 
@@ -95,7 +103,7 @@ def make_predictions(key, model, params, X, log_likelyhood, K = None): # X: (bat
     @jax.jit
     def make_single_prediction(x, epsilon):
         z, logit_q_z_xy, logit_p_x_yz, logit_p_y_z = jax.vmap(
-            partial(model.apply, {'params': params}),
+            partial(model.apply, {'params': params}, train=False),
             in_axes=(None, 0, 0)
         )(x, y, epsilon)
 
@@ -121,9 +129,9 @@ loss_A = jax.vmap(loss_A_single)
 def compute_batch_loss(key, model, params, X_batch, y_batch, loss_fn):
     key, epsilon = sample_gaussian(key, (X_batch.shape[0], model.d_latent))
     z, logit_q_z_xy, logit_p_x_yz, logit_p_y_z = jax.vmap(
-        model.apply, 
+        partial(model.apply, {'params': params}, train=False),
         in_axes=(None, 0, 0, 0)
-    )({"params": params}, X_batch, y_batch, epsilon)
+    )(X_batch, y_batch, epsilon)
     loss_value = jnp.mean(
         loss_fn(z, logit_q_z_xy, logit_p_x_yz, logit_p_y_z)
     )

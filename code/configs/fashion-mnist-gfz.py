@@ -4,6 +4,7 @@ def get_config():
   config = config_dict.ConfigDict()
   # params for the run
   config.checkpoint_name = "dummy_checkpoint"
+  config.checkpoint = False
   config.seed = 1
 
   # params about the dataset
@@ -21,5 +22,6 @@ def get_config():
   config.model.d_latent = 64
   config.model.d_hidden = 500
   config.model.K = 10
+  config.model.dropout_rate = 0.05
 
   return config

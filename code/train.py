@@ -1,4 +1,5 @@
 
+from functools import partial
 from ml_collections import ConfigDict, config_flags
 
 from models.utils import sample_gaussian
@@ -21,7 +22,9 @@ CHECKPOINT_DIR = Path.cwd() / Path("checkpoints")
 
 
 def train_and_evaluate(config: ConfigDict):
-    checkpointer = ocp.PyTreeCheckpointer()
+    checkpointer = None
+    if config.checkpoint:
+        checkpointer = ocp.PyTreeCheckpointer()
 
     train_ds, test_ds = get_dataset(config.dataset)
     train_dl = get_dataloader(train_ds, config.batch_size)
@@ -46,13 +49,15 @@ def train_and_evaluate(config: ConfigDict):
     optimiser = get_optimiser(config)
 
     training_state = train_state.TrainState.create(
-        apply_fn=model.apply,
+        apply_fn=partial(model.apply, train=True),
         params=init_params,
         tx=optimiser,
     )
 
+    del init_params # access params only through training_state
+
     # split training/test keys
-    key, training_key, test_key = random.split(key, 3)
+    key, training_key, dropout_key, test_key = random.split(key, 4)
 
     #sinks for the metric values
     training_steps, test_steps = [], []
@@ -78,7 +83,7 @@ def train_and_evaluate(config: ConfigDict):
 
                 # training step
                 training_state, loss_value = classifier.training_step(
-                    training_state, X_batch, y_batch_one_hot, epsilon, loss_single_fn
+                    training_state, X_batch, y_batch_one_hot, epsilon, loss_single_fn, dropout_key
                 )
                 
                 # log the training loss
@@ -108,21 +113,21 @@ def train_and_evaluate(config: ConfigDict):
             tepoch.set_postfix(
                training_loss=loss_value, test_loss=test_loss_value, accuracy=test_accuracy_value
             )
-
-            checkpointer.save(
-               CHECKPOINT_DIR / f"{config.checkpoint_name}-{epoch}",
-               {
-                  "model": model,
-                  "params": training_state.params,
-                  "config": config.to_dict(),
-                  "dataset_config": dataset_config.to_dict(),
-                  "training_steps": training_steps,
-                  "test_steps": test_steps,
-                  "training_loss_values": training_loss_values,
-                  "test_loss_values": test_loss_values,
-                  "test_accuracy_values": test_accuracy_values, 
-               }
-            )
+            if config.checkpoint:
+                checkpointer.save(
+                    CHECKPOINT_DIR / f"{config.checkpoint_name}-{epoch}",
+                    {
+                        "model": model,
+                        "params": training_state.params,
+                        "config": config.to_dict(),
+                        "dataset_config": dataset_config.to_dict(),
+                        "training_steps": training_steps,
+                        "test_steps": test_steps,
+                        "training_loss_values": training_loss_values,
+                        "test_loss_values": test_loss_values,
+                        "test_accuracy_values": test_accuracy_values, 
+                    }
+                )
 
 FLAGS = flags.FLAGS
 

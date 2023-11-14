@@ -1,6 +1,7 @@
 from flax import linen as nn
 from jax.nn.initializers import glorot_uniform
-from objax.functional.loss import cross_entropy_logits
+
+from models.utils import softmax_cross_entropy_with_logits
 
 class Log_p_y_z(nn.Module):
     d_hidden: int
@@ -22,4 +23,4 @@ class Log_p_y_z(nn.Module):
             use_bias=True,
             kernel_init=glorot_uniform(), 
         )(logits)
-        return -cross_entropy_logits(logits, y)
+        return -softmax_cross_entropy_with_logits(logits, y)

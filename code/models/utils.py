@@ -1,4 +1,5 @@
 import jax.numpy as jnp
+from jax.scipy.special import logsumexp
 import numpy as np
 import jax.random as random
 
@@ -16,3 +17,7 @@ def sample_gaussian(key, shape: tuple) -> np.ndarray:
     key, sample_key = random.split(key)
     epsilon = random.normal(sample_key, shape, dtype=jnp.float32)
     return key, epsilon
+
+# from the objax library
+def softmax_cross_entropy_with_logits(logits, labels):
+    return logsumexp(logits, axis=-1) - (logits * labels).sum(-1)

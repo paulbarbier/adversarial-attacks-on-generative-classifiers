@@ -3,11 +3,12 @@ from jax.nn.initializers import glorot_uniform
 from objax.functional.loss import cross_entropy_logits
 
 class Log_p_y_z(nn.Module):
-    d_hidden = 500
-    n_classes = 10
+    d_hidden: int
+    n_classes: int
+    d_latent: int
 
     @nn.compact
-    def __call__(self, y, z): # y: (n_classes,), z: (d_epsilon,) -> 0
+    def __call__(self, y, z): # y: (n_classes,), z: (d_latent,) -> 0
         logits = nn.Dense(
             features=self.d_hidden, 
             use_bias=True,

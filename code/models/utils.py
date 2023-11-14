@@ -12,7 +12,7 @@ def transform(epsilon, mu, log_sigma):
     z = mu + sigma * epsilon
     return z
 
-def sample_p(key, epsilon_shape: tuple) -> np.ndarray:
+def sample_gaussian(key, shape: tuple) -> np.ndarray:
     key, sample_key = random.split(key)
-    epsilon = random.normal(sample_key, epsilon_shape, dtype=jnp.float32)
+    epsilon = random.normal(sample_key, shape, dtype=jnp.float32)
     return key, epsilon

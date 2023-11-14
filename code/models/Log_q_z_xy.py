@@ -5,16 +5,17 @@ from jax.nn.initializers import glorot_uniform, glorot_normal
 from models.utils import transform, log_gaussian
 
 class Log_q_z_xy(nn.Module):
-    n_classes = 10
-    d_epsilon = 64
+    n_classes: int
+    d_latent: int
+    d_hidden: int
+
     n_convolutions = 3
     n_channels = 64
     kernel_size = (5, 5)
     strides = (2, 2)
-    d_hidden = 500
 
     @nn.compact
-    def __call__(self, X, y, epsilon): # X: (height, width), y: (n_classes,), epsilon: (d_epsilon,) -> (d_epsilon,), 0
+    def __call__(self, X, y, epsilon): # X: (height, width), y: (n_classes,), prior: (d_latent,) -> (d_latent,), 0
         for _ in range(self.n_convolutions):
             X = nn.Conv(
                 features=self.n_channels, 
@@ -41,7 +42,7 @@ class Log_q_z_xy(nn.Module):
         output = nn.relu(output)
 
         output = nn.Dense(
-            features=2*self.d_epsilon, 
+            features=2*self.d_latent, 
             use_bias=True,
             kernel_init=glorot_uniform(), 
         )(output)

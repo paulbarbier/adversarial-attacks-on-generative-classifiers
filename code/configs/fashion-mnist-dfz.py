@@ -3,9 +3,9 @@ from ml_collections import config_dict
 def get_config():
   config = config_dict.ConfigDict()
   # params for the run
-  config.checkpoint_name = "dummy_checkpoint"
-  config.checkpoint = False
-  config.seed = 1
+  config.checkpoint_name = "dfz-30-epochs-first-try"
+  config.checkpoint = True
+  config.seed = 123
 
   # params about the dataset
   config.dataset = "fashion-mnist"
@@ -14,7 +14,7 @@ def get_config():
   config.batch_size = 50
   config.optimiser = "adam"
   config.learning_rate = 1e-4
-  config.num_epochs = 20
+  config.num_epochs = 30
 
   # high-level model params
   config.model_name = "DFZ"

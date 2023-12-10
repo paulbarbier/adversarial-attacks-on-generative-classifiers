@@ -13,6 +13,7 @@ from tqdm import tqdm
 import orbax.checkpoint as ocp
 
 import models.ClassifierGFZ as ClassifierGFZ
+import models.ClassifierDFZ as ClassifierDFZ
 
 from absl import app
 from absl import flags
@@ -39,6 +40,8 @@ def train_and_evaluate(config: ConfigDict):
 
     if config.model_name == "GFZ":
        classifier = ClassifierGFZ
+    elif config.model_name == "DFZ":
+       classifier = ClassifierDFZ
     else:
        raise NotImplementedError(config.model_name)
 

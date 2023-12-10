@@ -130,7 +130,7 @@ def compute_batch_loss(key, model, params, X_batch, y_batch, loss_fn):
     key, epsilon = sample_gaussian(key, (X_batch.shape[0], model.d_latent))
     z, logit_q_z_xy, logit_p_x_yz, logit_p_y_z = jax.vmap(
         partial(model.apply, {'params': params}, train=False),
-        in_axes=(None, 0, 0, 0)
+        in_axes=(0, 0, 0)
     )(X_batch, y_batch, epsilon)
     loss_value = jnp.mean(
         loss_fn(z, logit_q_z_xy, logit_p_x_yz, logit_p_y_z)

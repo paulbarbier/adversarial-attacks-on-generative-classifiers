@@ -21,7 +21,10 @@ def get_data_config(dataset: data.Dataset) -> ConfigDict:
     return config
 
 def prepare_test_dataset(dataset: data.Dataset, dataset_config: ConfigDict):
-    image_shape = (-1,) + dataset_config.image_shape
+    config_image_shape = dataset_config.image_shape
+    if type(config_image_shape) is list:
+        config_image_shape = tuple(config_image_shape)
+    image_shape = (-1,) + config_image_shape
     images = jnp.array(dataset.data, dtype=jnp.float32).reshape(image_shape)/255.0
     labels = one_hot(jnp.array(dataset.targets, dtype=jnp.float32), dataset_config.n_classes)
     return images, labels

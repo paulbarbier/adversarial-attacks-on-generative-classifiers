@@ -23,3 +23,10 @@ cd code; python -m train --config=configs/fashion-mnist-gfz.py --config.checkpoi
 ```
 
 the params checkpoints after each epoch will be stored under `checkpoints`. there is a `load_checkpoint` function to load them back.
+
+## Evaluation
+To compute evaluation metrics on a given checkpoint, use the following command:
+
+```bash
+cd code; python -m evaluate --checkpoint=dfz-2-epochs-first-try-1
+```

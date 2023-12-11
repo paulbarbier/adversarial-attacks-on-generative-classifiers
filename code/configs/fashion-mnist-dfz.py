@@ -3,7 +3,7 @@ from ml_collections import config_dict
 def get_config():
   config = config_dict.ConfigDict()
   # params for the run
-  config.checkpoint_name = "dfz-30-epochs-first-try"
+  config.checkpoint_name = "dfz-2-epochs-first-try"
   config.checkpoint = True
   config.seed = 123
 
@@ -14,7 +14,7 @@ def get_config():
   config.batch_size = 50
   config.optimiser = "adam"
   config.learning_rate = 1e-4
-  config.num_epochs = 30
+  config.num_epochs = 2
 
   # high-level model params
   config.model_name = "DFZ"
@@ -22,6 +22,6 @@ def get_config():
   config.model.d_latent = 64
   config.model.d_hidden = 500
   config.model.K = 10
-  config.model.dropout_rate = 0.05
+  config.model.dropout_rate = 0.2
 
   return config

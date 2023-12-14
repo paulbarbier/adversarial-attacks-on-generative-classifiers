@@ -76,7 +76,16 @@ Alexandre Lutt, ENS Paris-Saclay\\
  & p(\bm{x}, \bm{y}, \bm{z}) = p_{\mathcal{D}}(\bm{y})p(\bm{z}|\bm{y})p(\bm{x}|\bm{z}) \tag{GBY} \\
 \end{align*}
 
-\paragraph{} In those acronyms, D stands for \textit{discriminative}, G stands for \textit{generative}, F stands for \textit{fully-connected graph}, and the last letter indicates on which variable we assume a prior distribution (determined with $\mathcal{D}$ in the case of X and Y). In our case, we will focus on the DFZ and GFZ structures, in order to be able to compare the discriminative and generative approaches, but everything that we will see can easily be extended to the other structures.
+\paragraph{} In those acronyms, D stands for \textit{discriminative}, G stands for \textit{generative}, F stands for \textit{fully-connected graph} (see \ref{fig:graphical_models_architecture}), and the last letter indicates on which variable we assume a prior distribution (determined with $\mathcal{D}$ in the case of X and Y). In our case, we will focus on the DFZ and GFZ structures, in order to be able to compare the discriminative and generative approaches, but everything that we will see can easily be extended to the other structures.
+
+\begin{figure}[h]
+\begin{center}
+\includegraphics[width=0.8\linewidth]{illustrations/graphical_models_architecture.png}
+\end{center}
+\caption{Examples of latent-variable models architecture}
+\label{fig:graphical_models_architecture}
+\end{figure}
+%% TODO: add a figure with the different graph architectures
 
 \subsection{Classifiers architecture}
 
@@ -86,11 +95,32 @@ Alexandre Lutt, ENS Paris-Saclay\\
 \section{Adversarial attacks}
 \label{sec:attacks}
 
-\paragraph{} In this section, we will present the different methods we used to create adversarial attacks on our models. These methods can be divided into two categories: white box attacks and black box attacks, depending on the knowledge of the attacker regarding the model. If the attacker has access to the model's parameters and architecture, we will talk about white box attacks. Otherwise, we will talk about black box attacks. 
+\paragraph{} In this section, we will present the different methods we used to create adversarial attacks on our models. These methods can be divided into two categories: white box attacks and black box attacks, depending on the knowledge of the attacker regarding the model. If the attacker has access to the model's parameters and architecture, we will talk about white box attacks. Otherwise, we will talk about black box attacks. \\
+In all cases, we aim to design attacks which are as imperceptible as possible to the human eye, while changing the predicted label of the model. In other words, we aim to solve the following optimization problem:
+
+\begin{equation*}
+\begin{aligned}
+& \underset{\bm{\eta}}{\text{min}}
+& & \|\bm{\eta}(\bm{x})\|_2 \\
+& \text{s.t.} 
+& & \underset{\bm{y} \in \mathcal{Y}}{\text{argmax }}(p(\bm{y}|\bm{x} + \bm{\eta}(\bm{x}))) \neq \underset{\bm{y} \in \mathcal{Y}}{\text{argmax }}p(\bm{y}|\bm{x}) \\
+\end{aligned}
+\end{equation*}
+
+where $\bm{\eta}$ is the adversarial perturbation, $\bm{x}$ is the original sample, and $p(\bm{y}|\bm{x})$ is the conditional probability of the label $\bm{y}$ given the sample $\bm{x}$. Note that as we are considering a multiclass classification problem, we will implement the different attacks as one-vs-all attacks, \textit{i.e.} we will create adversarial examples to change the prediction of the model for each class independently.
+
+\paragraph{} In order to compare the different algorithmic solutions to this problem, we will keep using the Fashion-MNIST dataset mentionned above, and we will compare the different approches by computing the accuracy of the model on the adversarial examples, as well as the average robustness $\rho = \displaystyle \dfrac{1}{n_{\text{samples}}} \sum \limits_{i=1}^{n_{\text{samples}}} \dfrac{\|\bm{\eta}(\bm{x}_i)\|_2}{\|\bm{x}_i\|_2}$ of the model to the adversarial perturbations.
 
 \subsection{White box attacks}
 
-\paragraph{} 
+\subsubsection{Fast Gradient Sign (FGS) method}
+
+\paragraph{} We first implemented the Fast Gradient Sign (FGS) method \cite{fast_gradient_sign}, which is a simple and efficient method to create adversarial attacks. Let us consider a model with a model loss function $J_{\theta}$ and a sample $(\bm{x}, \bm{y})$. The FGS method consists in adding a perturbation $\bm{\eta}$ to the input $\bm{x}$, with $\bm{\eta} = \varepsilon \times \text{sign}(\bm{\nabla}_{\bm{x}} J_{\theta}(\bm{x}, \bm{y}))$, where $\varepsilon$ is a hyperparameter which controls the magnitude of the perturbation. This method is very simple to implement, and cheap to run (since it only requires one gradient computation), but it comes with a practical drawback; the perturbations are often very visible to the human eye, which makes them less realistic. This comes from the fact that the $\varepsilon$ hyperparameter is often chosen to be too large, in order to ensure that the perturbation is large enough to fool the model. 
+
+\subsubsection{DeepFool method}
+
+\paragraph{} In order to create more subtle perturbations, we then implemented the DeepFool algorithm. This algorithm was first introduced in \cite{deepfool}, as a way to create small adversarial examples for deep neural networks. The idea is to iteratively compute the minimal perturbation $\bm{\eta}$ which is required to change the prediction of the model. More precisely, let us consider a model with a model loss function $J_{\theta}$ and a sample $(\bm{x}, \bm{y})$. The DeepFool algorithm consists in iteratively computing the minimal perturbation $\bm{\eta}$ which is required to change the prediction of the model, with $\bm{\eta} = \dfrac{J_{\theta}(\bm{x}, \bm{y})}{\|\bm{\nabla}_{\bm{x}} J_{\theta}(\bm{x}, \bm{y})\|_2^2} \bm{\nabla}_{\bm{x}} J_{\theta}(\bm{x}, \bm{y})$. The idea comes from the fact that, if the model is linear, the decision boundary is a hyperplane of equation $\bm{w}^T\bm{x} + b = 0$, and the minimal perturbation required to change the prediction of the model is the orthogonal projection of the sample on the decision boundary, \textit{i.e.} $\bm{\eta} = - \dfrac{\text{sign}(\bm{w}^T\bm{x} + b)}{||\bm{w}||_2^2} \bm{w}$. In the non-linear case, the decision boundary is not a hyperplane anymore, but this heuristic still works well in practice.
+Obviously, this algorithm is more expensive to run than the FGS method (since it requires several gradient computations), but it is also more efficient since it creates smaller perturbations.
 
 \subsection{Black box attacks}
 

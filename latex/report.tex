@@ -1,4 +1,4 @@
-\documentclass[10pt,twocolumn,letterpaper]{article}
+\documentclass[11pt,twocolumn,letterpaper]{article}
 
 \usepackage[pagenumbers]{cvpr}
 \usepackage{graphicx}
@@ -12,6 +12,7 @@
 \usepackage{float}
 \usepackage{cite}
 \usepackage{stmaryrd}
+\usepackage{bm}
 \usepackage[linesnumbered,lined,boxed,ruled,commentsnumbered]{algorithm2e}
 \usepackage{textcomp}
 \usepackage{amsfonts}
@@ -31,16 +32,10 @@
 \SetKwInput{KwInput}{Input}
 \SetKwInput{KwOutput}{Output}
 
-\newacronym{NLP}{NLP}{Natural Language Processing}
-\newacronym{CV}{CV}{Computer Vision}
-\newacronym{CNN}{CNN}{Convolutional Neural Network}
-\newacronym{RNN}{RNN}{Recurrent Neural Network}
-\newacronym{MLP}{MLP}{Multi Layer Perceptron}
-
 
 \begin{document}
 
-\title{Probabilistic Graphical Models \\ \textit{Are Generative Classiﬁers More Robust to Adversarial Attacks?}}
+\title{\LARGE Probabilistic Graphical Models \\ \textit{Are Generative Classiﬁers More Robust to Adversarial Attacks?}}
 
 \author{Manal Akhannouss, ENS Paris-Saclay\\
 {\tt\small manal.akhannouss@eleves.enpc.fr}
@@ -57,7 +52,7 @@ Alexandre Lutt, ENS Paris-Saclay\\
 \section{Introduction}
 \label{sec:intro}
 
-\paragraph{} \cite{main_paper} 
+\paragraph{} 
 
 
 \section{Models}
@@ -67,15 +62,31 @@ Alexandre Lutt, ENS Paris-Saclay\\
 
 \subsection{Discriminative versus generative models}
 
-\paragraph{} 
+\paragraph{} Let us consider a dataset $\mathcal{D} = \{(\bm{x}_i, \bm{y}_i)\}_{i=1}^N$ of $N$ samples, where $\bm{x}_i \in \mathbb{R}^d$ is a $d$-dimensional feature vector and $\bm{y}_i \in \mathcal{Y}$ is the corresponding label. A discriminative classification model (or discriminative classifier) aims to estimate the conditional probability $p(\bm{y}|\bm{x})$, \textit{i.e.} the probability that the label $\bm{y}$ is associated to the feature vector $\bm{x}$. On the other hand, a generative classification model (or generative classifier) aims to estimate the joint probability $p(\bm{x}, \bm{y})$, \textit{i.e.} the probability of observing the feature vector $\bm{x}$ and the label $\bm{y}$ at the same time. Both models can be used for classification purposes, \textit{i.e.} can be used to predict the label $\bm{y}$ associated to a feature vector $\bm{x}$, but with very different interpretations. The discriminative classifier will directly estimate the conditional probability $p(\bm{y}|\bm{x})$, while the generative classifier will estimate the joint probability $p(\bm{x}, \bm{y})$ for each possible value of $\bm{y}$, and then use the Bayes rule to estimate the conditional probability $p(\bm{y}|\bm{x}) = \dfrac{p(\bm{x}|\bm{y})p(\bm{y})}{p(\bm{x})}$.
+
+\paragraph{} One of the most common generative classifier is Naive Bayes. This simple model assumes a factorised distribution $\displaystyle p(\bm{x}|\bm{y}) = \prod_{i=1}^d p(\bm{x}_i|\bm{y})$, which means that the features are independent given the label. This assumption is often far from being verified in practice for image datasets. For this reason, in the following, we will follow the path of \cite{main_paper} and use a latent-variable model $p(\bm{x}, \bm{y}, \bm{z})$ to design our generative classifier. Note that this model does not assume a factorised distribution for $p(\bm{x}|\bm{y})$, since in this case $p(\bm{x}|\bm{y}) = \displaystyle\dfrac{\int p(\bm{x}, \bm{y}, \bm{z}) d\bm{z}}{\int p(\bm{x}, \bm{y}, \bm{z}) d\bm{x} d\bm{y}}$. In order to fully define a latent-variable model, we need to explicitely chose a structure for $p(\bm{x}, \bm{y}, \bm{z})$. At this point, several choices are possible:
+
+\begin{align*}
+ & p(\bm{x}, \bm{y}, \bm{z}) = p_{\mathcal{D}}(\bm{x})p(\bm{z}|\bm{x})p(\bm{y}|\bm{x}, \bm{z}) \tag{DFX} \\
+ & p(\bm{x}, \bm{y}, \bm{z}) = p(\bm{z})p(\bm{x}|\bm{z})p(\bm{y}|\bm{x}, \bm{z}) \tag{DFZ} \\
+ & p(\bm{x}, \bm{y}, \bm{z}) = p_{\mathcal{D}}(\bm{x})p(\bm{z}|\bm{x})p(\bm{y}|\bm{z}) \tag{DBX} \\
+ & p(\bm{x}, \bm{y}, \bm{z}) = p(\bm{z})p(\bm{y}|\bm{z})p(\bm{x}|\bm{y}, \bm{z}) \tag{GFZ} \\
+ & p(\bm{x}, \bm{y}, \bm{z}) = p_{\mathcal{D}}(\bm{y})p(\bm{z}|\bm{y})p(\bm{x}|\bm{y}, \bm{z}) \tag{GFY} \\
+ & p(\bm{x}, \bm{y}, \bm{z}) = p(\bm{z})p(\bm{y}|\bm{z})p(\bm{x}|\bm{z}) \tag{GBZ} \\
+ & p(\bm{x}, \bm{y}, \bm{z}) = p_{\mathcal{D}}(\bm{y})p(\bm{z}|\bm{y})p(\bm{x}|\bm{z}) \tag{GBY} \\
+\end{align*}
+
+\paragraph{} In those acronyms, D stands for \textit{discriminative}, G stands for \textit{generative}, F stands for \textit{fully-connected graph}, and the last letter indicates on which variable we assume a prior distribution (determined with $\mathcal{D}$ in the case of X and Y). In our case, we will focus on the DFZ and GFZ structures, in order to be able to compare the discriminative and generative approaches, but everything that we will see can easily be extended to the other structures.
 
 \subsection{Classifiers architecture}
 
-\paragraph{} 
-
+\paragraph{} As mentionned above, we will consider two different classifiers. The first one will be a simple discriminative classifier (with DFZ structure), while the second one will be a generative classifier (with GFZ structure).
+%% TODO: explain both architectures (add a figure?)
 
 \section{Adversarial attacks}
 \label{sec:attacks}
+
+\paragraph{} In this section, we will present the different methods we used to create adversarial attacks on our models. These methods can be divided into two categories: white box attacks and black box attacks, depending on the knowledge of the attacker regarding the model. If the attacker has access to the model's parameters and architecture, we will talk about white box attacks. Otherwise, we will talk about black box attacks. 
 
 \subsection{White box attacks}
 
@@ -90,6 +101,8 @@ Alexandre Lutt, ENS Paris-Saclay\\
 \label{sec:setup}
 
 \subsection{Attacks detection}
+
+\paragraph{} 
 
 \subsection{Models training}
 
@@ -117,11 +130,15 @@ Alexandre Lutt, ENS Paris-Saclay\\
 
 \subsection{Attacks detection}
 
-\paragraph{}
+\paragraph{} 
 
 
 \section{Conclusion}
 \label{sec:conclusion}
+
+
+\section{Appendix}
+\label{sec:appendix}
 
 %%%%%%%%% REFERENCES
 {\small

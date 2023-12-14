@@ -14,6 +14,7 @@
 \usepackage{stmaryrd}
 \usepackage{bm}
 \usepackage[linesnumbered,lined,boxed,ruled,commentsnumbered]{algorithm2e}
+\usepackage{algorithmic}
 \usepackage{textcomp}
 \usepackage{amsfonts}
 \usepackage[acronym]{glossaries}
@@ -115,11 +116,11 @@ where $\bm{\eta}$ is the adversarial perturbation, $\bm{x}$ is the original samp
 
 \subsubsection{Fast Gradient Sign (FGS) method}
 
-\paragraph{} We first implemented the Fast Gradient Sign (FGS) method \cite{fast_gradient_sign}, which is a simple and efficient method to create adversarial attacks. Let us consider a model with a model loss function $J_{\theta}$ and a sample $(\bm{x}, \bm{y})$. The FGS method consists in adding a perturbation $\bm{\eta}$ to the input $\bm{x}$, with $\bm{\eta} = \varepsilon \times \text{sign}(\bm{\nabla}_{\bm{x}} J_{\theta}(\bm{x}, \bm{y}))$, where $\varepsilon$ is a hyperparameter which controls the magnitude of the perturbation. This method is very simple to implement, and cheap to run (since it only requires one gradient computation), but it comes with a practical drawback; the perturbations are often very visible to the human eye, which makes them less realistic. This comes from the fact that the $\varepsilon$ hyperparameter is often chosen to be too large, in order to ensure that the perturbation is large enough to fool the model. 
+\paragraph{} We first implemented the Fast Gradient Sign (FGS) method \cite{fast_gradient_sign}, which is a simple and efficient method to create adversarial attacks. Let us consider a model with a model loss function $J_{\theta}$ and a sample $(\bm{x}, \bm{y})$. The FGS method consists in adding a perturbation $\bm{\eta}$ to the input $\bm{x}$, with $\bm{\eta} = \varepsilon \times \text{sign}(\bm{\nabla}_{\bm{x}} J_{\theta}(\bm{x}, \bm{y}))$, where $\varepsilon$ is a hyperparameter which controls the magnitude of the perturbation. For more details, our implementation of the Fast Gradient Sign method is described in \ref{algo:fgs}. This method is very simple to implement, and cheap to run (since it only requires one gradient computation), but it comes with a practical drawback; the perturbations are often very visible to the human eye, which makes them less realistic. This comes from the fact that the $\varepsilon$ hyperparameter is often chosen to be too large, in order to ensure that the perturbation is large enough to fool the model. 
 
 \subsubsection{DeepFool method}
 
-\paragraph{} In order to create more subtle perturbations, we then implemented the DeepFool algorithm. This algorithm was first introduced in \cite{deepfool}, as a way to create small adversarial examples for deep neural networks. The idea is to iteratively compute the minimal perturbation $\bm{\eta}$ which is required to change the prediction of the model. More precisely, let us consider a model with a model loss function $J_{\theta}$ and a sample $(\bm{x}, \bm{y})$. The DeepFool algorithm consists in iteratively computing the minimal perturbation $\bm{\eta}$ which is required to change the prediction of the model, with $\bm{\eta} = \dfrac{J_{\theta}(\bm{x}, \bm{y})}{\|\bm{\nabla}_{\bm{x}} J_{\theta}(\bm{x}, \bm{y})\|_2^2} \bm{\nabla}_{\bm{x}} J_{\theta}(\bm{x}, \bm{y})$. The idea comes from the fact that, if the model is linear, the decision boundary is a hyperplane of equation $\bm{w}^T\bm{x} + b = 0$, and the minimal perturbation required to change the prediction of the model is the orthogonal projection of the sample on the decision boundary, \textit{i.e.} $\bm{\eta} = - \dfrac{\text{sign}(\bm{w}^T\bm{x} + b)}{||\bm{w}||_2^2} \bm{w}$. In the non-linear case, the decision boundary is not a hyperplane anymore, but this heuristic still works well in practice.
+\paragraph{} In order to create more subtle perturbations, we then implemented the DeepFool algorithm. This algorithm was first introduced in \cite{deepfool}, as a way to create small adversarial examples for deep neural networks. The idea is to iteratively compute the minimal perturbation $\bm{\eta}$ which is required to change the prediction of the model. More precisely, let us consider a model with a model loss function $J_{\theta}$ and a sample $(\bm{x}, \bm{y})$. The DeepFool algorithm consists in iteratively computing the minimal perturbation $\bm{\eta}$ which is required to change the prediction of the model, with $\bm{\eta} = \dfrac{J_{\theta}(\bm{x}, \bm{y})}{\|\bm{\nabla}_{\bm{x}} J_{\theta}(\bm{x}, \bm{y})\|_2^2} \bm{\nabla}_{\bm{x}} J_{\theta}(\bm{x}, \bm{y})$. The idea comes from the fact that, if the model is linear, the decision boundary is a hyperplane of equation $\bm{w}^T\bm{x} + b = 0$, and the minimal perturbation required to change the prediction of the model is the orthogonal projection of the sample on the decision boundary, \textit{i.e.} $\bm{\eta} = - \dfrac{\text{sign}(\bm{w}^T\bm{x} + b)}{||\bm{w}||_2^2} \bm{w}$. In the non-linear case, the decision boundary is not a hyperplane anymore, but this heuristic still works well in practice. More precisely, our implementation of the DeepFool algorithm is described in \ref{algo:deepfool} (where we can chose another p-norm to optimise on, even if in practice we mostly focused on the case $p=2$).
 Obviously, this algorithm is more expensive to run than the FGS method (since it requires several gradient computations), but it is also more efficient since it creates smaller perturbations.
 
 \subsection{Black box attacks}
@@ -169,6 +170,45 @@ Obviously, this algorithm is more expensive to run than the FGS method (since it
 
 \section{Appendix}
 \label{sec:appendix}
+
+\subsection{Fast Gradient Sign algorithm}
+
+\begin{algorithm}
+\SetAlgoLined
+\KwInput{$f_{\theta}$, $\bm{x}$, $\bm{y}$, $\varepsilon$}
+\KwOutput{$\bm{\eta}$}
+\For{$k \neq y$}{
+     $\bm{g}_k \leftarrow \bm{\nabla}_{\bm{x}} J_{\theta}(\bm{x}, k)$ \\
+     $\bm{\eta}_k \leftarrow \varepsilon \times \text{sign}(\bm{g}_k)$ \\
+}
+$\bm{\eta} \leftarrow \underset{k, f_{\theta}(\bm{x} + \eta_k) \neq y}{\text{argmin }} \|\bm{\eta}_k\|_2$ \\
+\caption{Fast Gradient Sign method}
+\label{algo:fgs}
+\end{algorithm}
+
+\subsection{DeepFool algorithm}
+
+\begin{algorithm}
+    \SetAlgoLined
+    \KwInput{$f_{\theta}$, $\bm{x}$, $\bm{y}$, $\varepsilon$, $p > 1$}    \KwOutput{$\bm{\eta}$}
+    $q \leftarrow \frac{p}{p-1}$ \\
+    $i \leftarrow 0$ \\
+    $\bm{\eta} \leftarrow 0$ \\
+    $\bm{x}_0 \leftarrow \bm{x}$ \\
+    \While{$f_{\theta}(\bm{x}_i) = y$}{
+        $i \leftarrow i + 1$ \\
+        \For{$k \neq y$}{
+            $\bm{w}_k \leftarrow \bm{\nabla}_{\bm{x}} J_{\theta}(\bm{x}_i, k) - \bm{\nabla}_{\bm{x}} J_{\theta}(\bm{x}_i, y)$ \\
+            $f_k \leftarrow J_{\theta}(\bm{x}_i, k) - J_{\theta}(\bm{x}_i, y)$ \\
+        }
+        $l \leftarrow \underset{k \neq y}{\text{argmin }} \frac{|f_k|}{||\bm{w}_k||_q}$ \\
+        $\bm{\eta}_i \leftarrow \frac{|f_l|}{||\bm{w}_l||_q^q} |\bm{w}_l|^{q-1} \times \text{sign}(\bm{w}_l)$ \\
+        $\bm{x}_{i+1} \leftarrow \bm{x}_i + \bm{\eta}_i$ \\
+        $\bm{\eta} \leftarrow \bm{\eta} + \bm{\eta}_i$ \\
+    }
+    \caption{DeepFool algorithm}
+    \label{algo:deepfool}
+\end{algorithm}
 
 %%%%%%%%% REFERENCES
 {\small

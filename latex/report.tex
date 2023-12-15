@@ -102,15 +102,15 @@ In all cases, we aim to design attacks which are as imperceptible as possible to
 \begin{equation*}
 \begin{aligned}
 & \underset{\bm{\eta}}{\text{min}}
-& & \|\bm{\eta}(\bm{x})\|_2 \\
+& & \|\bm{\eta}\|_2 \\
 & \text{s.t.} 
-& & \underset{\bm{y} \in \mathcal{Y}}{\text{argmax }}(p(\bm{y}|\bm{x} + \bm{\eta}(\bm{x}))) \neq \underset{\bm{y} \in \mathcal{Y}}{\text{argmax }}p(\bm{y}|\bm{x}) \\
+& & \underset{\bm{y} \in \mathcal{Y}}{\text{argmax }}(p(\bm{y}|\bm{x} + \bm{\eta})) \neq \underset{\bm{y} \in \mathcal{Y}}{\text{argmax }}p(\bm{y}|\bm{x}) \\
 \end{aligned}
 \end{equation*}
 
 where $\bm{\eta}$ is the adversarial perturbation, $\bm{x}$ is the original sample, and $p(\bm{y}|\bm{x})$ is the conditional probability of the label $\bm{y}$ given the sample $\bm{x}$. Note that as we are considering a multiclass classification problem, we will implement the different attacks as one-vs-all attacks, \textit{i.e.} we will create adversarial examples to change the prediction of the model for each class independently.
 
-\paragraph{} In order to compare the different algorithmic solutions to this problem, we will keep using the Fashion-MNIST dataset mentionned above, and we will compare the different approches by computing the accuracy of the model on the adversarial examples, as well as the average robustness $\rho = \displaystyle \dfrac{1}{n_{\text{samples}}} \sum \limits_{i=1}^{n_{\text{samples}}} \dfrac{\|\bm{\eta}(\bm{x}_i)\|_2}{\|\bm{x}_i\|_2}$ of the model to the adversarial perturbations.
+\paragraph{} In order to compare the different algorithmic solutions to this problem, we will keep using the Fashion-MNIST dataset mentionned above, and we will compare the different approches by computing the accuracy of the model on the adversarial examples, as well as the average robustness $\rho = \displaystyle \dfrac{1}{n_{\text{samples}}} \sum \limits_{i=1}^{n_{\text{samples}}} \dfrac{\|\bm{\eta}_i \|_2}{\|\bm{x}_i\|_2}$ of the model to the adversarial perturbations.
 
 \subsection{White box attacks}
 
@@ -190,7 +190,7 @@ $\bm{\eta} \leftarrow \underset{k, f_{\theta}(\bm{x} + \eta_k) \neq y}{\text{arg
 
 \begin{algorithm}
     \SetAlgoLined
-    \KwInput{$f_{\theta}$, $\bm{x}$, $\bm{y}$, $\varepsilon$, $p > 1$}    \KwOutput{$\bm{\eta}$}
+    \KwInput{$f_{\theta}$, $\bm{x}$, $\bm{y}$, $p > 1$}    \KwOutput{$\bm{\eta}$}
     $q \leftarrow \frac{p}{p-1}$ \\
     $i \leftarrow 0$ \\
     $\bm{\eta} \leftarrow 0$ \\

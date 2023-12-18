@@ -5,12 +5,15 @@ def get_config():
   # params for the run
   config.checkpoint_name = "dfz-2-epochs-first-try"
   config.checkpoint = True
-  config.seed = 123
+  config.train_seed = 123
+  config.eval_seed = 456
+  config.attack_seed = 789
 
   # params about the dataset
   config.dataset = "fashion-mnist"
 
   # training params
+  config.dtype = "float32"
   config.batch_size = 50
   config.optimiser = "adam"
   config.learning_rate = 1e-4

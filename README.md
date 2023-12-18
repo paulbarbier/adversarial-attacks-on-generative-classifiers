@@ -28,5 +28,5 @@ the params checkpoints after each epoch will be stored under `checkpoints`. ther
 To compute evaluation metrics on a given checkpoint, use the following command:
 
 ```bash
-cd code; python -m evaluate --checkpoint=dfz-2-epochs-first-try-1
+cd code; python -m evaluate --checkpoint=checkpoints/dfz-2-epochs-first-try-2 --ratio=0.01
 ```

@@ -4,7 +4,7 @@ from ml_collections import ConfigDict, config_flags
 
 from models.utils import sample_gaussian
 from dataset_utils import get_dataset, get_dataloader
-from utils import get_data_config, prepare_test_dataset
+from utils import get_classifier, get_data_config, get_dtype, prepare_test_dataset
 from optimiser import get_optimiser
 from jax import random
 from jax.nn import one_hot
@@ -23,40 +23,30 @@ CHECKPOINT_DIR = Path.cwd() / Path("checkpoints")
 
 
 def train_and_evaluate(config: ConfigDict):
+    dtype = get_dtype(config.dtype)
+
     checkpointer = None
     if config.checkpoint:
         checkpointer = ocp.PyTreeCheckpointer()
 
     train_ds, test_ds = get_dataset(config.dataset)
-    train_dl = get_dataloader(train_ds, config.batch_size)
+    train_dl = get_dataloader(train_ds, config.batch_size, dtype)
 
     dataset_config = get_data_config(train_ds)
 
     test_images, test_labels = prepare_test_dataset(
-       test_ds, dataset_config
+       test_ds, dataset_config, dtype
     )
     
-    key = random.PRNGKey(config.seed)
+    key = random.PRNGKey(config.train_seed)
 
-    if config.model_name == "GFZ":
-       classifier = ClassifierGFZ
-    elif config.model_name == "DFZ":
-       classifier = ClassifierDFZ
-    else:
-       raise NotImplementedError(config.model_name)
-
-    key, model, init_params = classifier.create_and_init(
-       key, config, dataset_config
-    )
+    classifier = get_classifier(config)
+    model_config = classifier.create_model_config(config, dataset_config)
+    key, init_params = classifier.init_params(key, model_config, dtype)
 
     optimiser = get_optimiser(config)
 
-    training_state = train_state.TrainState.create(
-        apply_fn=partial(model.apply, train=True),
-        params=init_params,
-        tx=optimiser,
-    )
-
+    training_state = classifier.create_training_state(model_config, init_params, optimiser) 
     del init_params # access params only through training_state
 
     # split training/test keys
@@ -69,7 +59,7 @@ def train_and_evaluate(config: ConfigDict):
 
     epsilon_shape = (config.batch_size, config.model.d_latent)
 
-    log_likelyhood_fn = classifier.log_likelyhood_A
+    log_likelihood_fn = classifier.log_likelihood_A
     loss_fn = classifier.loss_A
     loss_single_fn = classifier.loss_A_single
 
@@ -97,16 +87,16 @@ def train_and_evaluate(config: ConfigDict):
 
             # compute test loss and accuracy
             test_key, test_loss_value = classifier.compute_batch_loss(
-                test_key, model, training_state.params, test_images, test_labels, loss_fn,
+                test_key, model_config, training_state.params, test_images, test_labels, loss_fn,
             )
 
             test_key, test_accuracy_value = classifier.compute_batch_accuracy(
                 test_key, 
-                model, 
+                model_config, 
                 training_state.params, 
                 test_images[:100], 
                 test_labels[:100], 
-                log_likelyhood_fn,
+                log_likelihood_fn,
             )
 
             test_loss_values.append(test_loss_value)
@@ -120,7 +110,7 @@ def train_and_evaluate(config: ConfigDict):
                 checkpointer.save(
                     CHECKPOINT_DIR / f"{config.checkpoint_name}-{epoch}",
                     {
-                        "model": model,
+                        "model": model_config,
                         "params": training_state.params,
                         "config": config.to_dict(),
                         "dataset_config": dataset_config.to_dict(),

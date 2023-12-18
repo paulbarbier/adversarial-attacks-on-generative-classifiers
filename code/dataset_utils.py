@@ -1,4 +1,5 @@
 from jax import tree_map
+from jax.typing import DTypeLike
 import jax.numpy as jnp
 from torch.utils import data
 from torchvision.datasets import FashionMNIST, MNIST
@@ -28,8 +29,8 @@ class NumpyLoader(data.DataLoader):
         worker_init_fn=worker_init_fn)
   
 class TransformImage:
-  def __call__(self, image):
-    return np.array(image, dtype=jnp.float32).reshape(28, 28, 1)/255.0
+    def __call__(self, image):
+        return np.array(image).reshape(28, 28, 1)/255.0
  
 
 def get_dataset(name: str):

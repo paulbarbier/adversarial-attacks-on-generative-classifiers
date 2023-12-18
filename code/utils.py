@@ -2,10 +2,14 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 import jax.numpy as jnp
+from jax.typing import DTypeLike
 from jax.nn import one_hot
 from ml_collections import ConfigDict, config_dict
 from torch.utils import data
 import orbax.checkpoint as ocp
+
+import models.ClassifierGFZ as ClassifierGFZ
+import models.ClassifierDFZ as ClassifierDFZ
 
 def plot_image(image):
     plt.imshow(image, interpolation='nearest')
@@ -20,15 +24,30 @@ def get_data_config(dataset: data.Dataset) -> ConfigDict:
     config.n_images = len(dataset.targets)
     return config
 
-def prepare_test_dataset(dataset: data.Dataset, dataset_config: ConfigDict):
-    config_image_shape = dataset_config.image_shape
-    if type(config_image_shape) is list:
-        config_image_shape = tuple(config_image_shape)
-    image_shape = (-1,) + config_image_shape
-    images = jnp.array(dataset.data, dtype=jnp.float32).reshape(image_shape)/255.0
-    labels = one_hot(jnp.array(dataset.targets, dtype=jnp.float32), dataset_config.n_classes)
+def prepare_test_dataset(dataset: data.Dataset, dataset_config: ConfigDict, dtype: DTypeLike):
+    image_shape = (-1,) + dataset_config.image_shape
+    images = jnp.array(dataset.data, dtype=dtype).reshape(image_shape)/255.0
+    labels = one_hot(jnp.array(dataset.targets, dtype=dtype), dataset_config.n_classes)
     return images, labels
 
 def load_checkpoint(path: Path) -> object:
     checkpointer = ocp.PyTreeCheckpointer()
     return checkpointer.restore(path) 
+
+def get_dtype(dtype_option: str):
+    if dtype_option == "float32":
+        dtype = jnp.float32
+    elif dtype_option == "bfloat16":
+        dtype = jnp.bfloat16
+    else:
+        raise NotImplementedError(dtype_option)
+    return dtype
+
+def get_classifier(config: ConfigDict):
+    if config.model_name == "GFZ":
+        classifier = ClassifierGFZ
+    elif config.model_name == "DFZ":
+        classifier = ClassifierDFZ
+    else:
+        raise NotImplementedError(config.model_name)
+    return classifier

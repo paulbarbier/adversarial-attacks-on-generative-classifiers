@@ -3,7 +3,7 @@ from ml_collections import config_dict
 def get_config():
   config = config_dict.ConfigDict()
   # params for the run
-  config.checkpoint_name = "gfz-2-epochs-first-try"
+  config.checkpoint_name = "gfz-dummy"
   config.checkpoint = True
   config.train_seed = 123
   config.eval_seed = 456

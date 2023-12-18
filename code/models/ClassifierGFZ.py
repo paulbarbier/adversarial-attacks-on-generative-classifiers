@@ -1,4 +1,6 @@
 import jax
+from jax.typing import DTypeLike
+from flax import struct
 from flax import linen as nn
 import jax.numpy as jnp
 import numpy as np
@@ -10,57 +12,82 @@ from flax.training.train_state import TrainState
 
 from models.utils import log_gaussian, sample_gaussian
 
-from models.Log_q_z_xy import Log_q_z_xy
-from models.Log_p_x_yz import Log_p_x_yz
-from models.Log_p_y_z import Log_p_y_z
+from models.LogQZ_XY import LogQZ_XY, QZ_XYConfiguration
+from models.LogPX_YZ import LogPX_YZ, PX_YZConfiguration
+from models.LogPY_Z import LogPY_Z, PY_ZConfiguration
 
+from typing import Tuple
+
+@struct.dataclass
+class GFZConfiguration:
+    image_shape: Tuple[int, int, int]
+    n_classes: int
+    d_latent: int
+    K: int
+
+    qz_xy: QZ_XYConfiguration
+    px_yz: PX_YZConfiguration
+    py_z: PY_ZConfiguration
+
+def create_model_config(config: ConfigDict, dataset_config: ConfigDict) -> GFZConfiguration:
+    model_config = GFZConfiguration(
+        image_shape=dataset_config.image_shape,
+        n_classes=dataset_config.n_classes,
+        d_latent=config.model.d_latent,
+        K=config.model.K,
+
+        qz_xy=QZ_XYConfiguration(
+            n_classes=dataset_config.n_classes,
+            d_latent=config.model.d_latent,
+            d_hidden=config.model.d_hidden,
+            dropout_rate=config.model.dropout_rate,
+        ),
+
+        px_yz=PX_YZConfiguration(
+            n_classes=dataset_config.n_classes,
+            d_latent=config.model.d_latent,
+            d_hidden=config.model.d_hidden,
+            dropout_rate=config.model.dropout_rate,
+        ),
+
+        py_z=PY_ZConfiguration(
+            n_classes=dataset_config.n_classes,
+            d_latent=config.model.d_latent,
+            d_hidden=config.model.d_hidden,
+            dropout_rate=config.model.dropout_rate,
+        ),
+    )
+    return model_config
 
 # Base class that bundles all the sub-modules of the classifier
 class ClassifierGFZ(nn.Module):
-    n_classes: int
-    d_latent: int
-    d_hidden: int
-    K: int
-    dropout_rate: float
+    config: GFZConfiguration
 
     @nn.compact
     def __call__(self, X, y, epsilon, train: bool = False): # X: (height, width), y: (n_classes,), epsilon: (d_latent,) -> 1, 1
-        z, logit_q_z_xy = Log_q_z_xy(
-            n_classes=self.n_classes,
-            d_latent=self.d_latent,
-            d_hidden=self.d_hidden,
-            dropout_rate=self.dropout_rate,
-        )(X, y, epsilon, train)
-        logit_p_x_yz = Log_p_x_yz(
-            n_classes=self.n_classes,
-            d_latent=self.d_latent,
-            d_hidden=self.d_hidden,
-            dropout_rate=self.dropout_rate,
-        )(X, y, z, train)
-        logit_p_y_z = Log_p_y_z(
-            n_classes=self.n_classes,
-            d_latent=self.d_latent,
-            d_hidden=self.d_hidden,
-            dropout_rate=self.dropout_rate,
-        )(y, z, train)
+        config = self.config
+        z, logit_q_z_xy = LogQZ_XY(config.qz_xy)(X, y, epsilon, train)
+        logit_p_x_yz = LogPX_YZ(config.px_yz)(X, y, z, train)
+        logit_p_y_z = LogPY_Z(config.py_z)(y, z, train)
         return z, logit_q_z_xy, logit_p_x_yz, logit_p_y_z
 
-# create an instance of Classifier and init the parameters
-def create_and_init(key, config: ConfigDict, dataset_config: ConfigDict) -> ClassifierGFZ:
-    model = ClassifierGFZ(
-       **config.model,
-       n_classes=dataset_config.n_classes,
-    )
-
-    X = jnp.ones(dataset_config.image_shape, dtype=jnp.float32)
-    y = jnp.ones(dataset_config.n_classes, dtype=jnp.float32)
-    
-    epsilon = jnp.ones(config.model.d_latent, dtype=jnp.float32)
+# create an instance of Classifier and init the params
+def init_params(key, config: GFZConfiguration, dtype: DTypeLike = jnp.float32):
+    X = jnp.ones(config.image_shape, dtype=dtype)
+    y = jnp.ones(config.n_classes, dtype=dtype)
+    epsilon = jnp.ones(config.d_latent, dtype=dtype)
 
     key, subkey = random.split(key)
-    params = model.init(subkey, X, y, epsilon)["params"]
+    params = ClassifierGFZ(config).init(subkey, X, y, epsilon)["params"]
 
-    return key, model, params
+    return key, params
+
+def create_training_state(config: GFZConfiguration, init_params, optimiser) -> TrainState:
+    return TrainState.create(
+        apply_fn=partial(ClassifierGFZ(config).apply, train=True),
+        params=init_params,
+        tx=optimiser,
+    )
 
 # perform a single training step:
 # * compute the batch_loss
@@ -93,23 +120,23 @@ def training_step(state: TrainState, X_batch, y_batch, epsilon, loss_single, dro
   return new_state, loss
 
 # make batch prediction of X using the ll function and the sampling parameter K
-def make_predictions(key, model, params, X, log_likelyhood, K = None): # X: (batch_size, image_size, image_size, 1)
+def make_predictions(key, config: GFZConfiguration, params, X, log_likelihood, K = None): # X: (batch_size, image_size, image_size, 1)
     if K is None:
-        K = model.K
+        K = config.K
     batch_size = X.shape[0]
-    key, epsilon = sample_gaussian(key, (batch_size, model.n_classes * K, model.d_latent))
-    y = nn.one_hot(jnp.repeat(jnp.arange(model.n_classes), K), model.n_classes, dtype=jnp.float32)
+    key, epsilon = sample_gaussian(key, (batch_size, config.n_classes * K, config.d_latent))
+    y = nn.one_hot(jnp.repeat(jnp.arange(config.n_classes), K), config.n_classes, dtype=X.dtype)
 
     @jax.jit
     def make_single_prediction(x, epsilon):
         z, logit_q_z_xy, logit_p_x_yz, logit_p_y_z = jax.vmap(
-            partial(model.apply, {'params': params}, train=False),
+            partial(ClassifierGFZ(config).apply, {'params': params}, train=False),
             in_axes=(None, 0, 0)
         )(x, y, epsilon)
 
-        ll = log_likelyhood(
+        ll = log_likelihood(
             z, logit_q_z_xy, logit_p_x_yz, logit_p_y_z
-        ).reshape(model.n_classes, K)
+        ).reshape(config.n_classes, K)
 
         p_bayes = nn.softmax(logsumexp(ll, axis=1) - np.log(K))
         y_prediction = jnp.argmax(p_bayes)
@@ -118,7 +145,7 @@ def make_predictions(key, model, params, X, log_likelyhood, K = None): # X: (bat
     y_predictions = jax.vmap(make_single_prediction)(X, epsilon)
     return key, y_predictions
 
-# ll stands for log-likelyhood
+# ll stands for log-likelihood
 def loss_A_single(z, logit_q_z_xy, logit_p_x_yz, logit_p_y_z):
     logit_prior_z = log_gaussian(z)
     ll = logit_p_x_yz + logit_p_y_z + logit_prior_z - logit_q_z_xy
@@ -126,10 +153,10 @@ def loss_A_single(z, logit_q_z_xy, logit_p_x_yz, logit_p_y_z):
 # define batch loss
 loss_A = jax.vmap(loss_A_single)
 
-def compute_batch_loss(key, model, params, X_batch, y_batch, loss_fn):
-    key, epsilon = sample_gaussian(key, (X_batch.shape[0], model.d_latent))
+def compute_batch_loss(key, config: GFZConfiguration, params, X_batch, y_batch, loss_fn):
+    key, epsilon = sample_gaussian(key, (X_batch.shape[0], config.d_latent))
     z, logit_q_z_xy, logit_p_x_yz, logit_p_y_z = jax.vmap(
-        partial(model.apply, {'params': params}, train=False),
+        partial(ClassifierGFZ(config).apply, {'params': params}, train=False),
         in_axes=(0, 0, 0)
     )(X_batch, y_batch, epsilon)
     loss_value = jnp.mean(
@@ -137,11 +164,11 @@ def compute_batch_loss(key, model, params, X_batch, y_batch, loss_fn):
     )
     return key, loss_value
 
-def compute_batch_accuracy(key, model, params, X_batch, y_batch, log_likelyhood, K = None):
-    key, y_predictions = make_predictions(key, model, params, X_batch, log_likelyhood, K)
+def compute_batch_accuracy(key, config, params, X_batch, y_batch, log_likelihood, K = None):
+    key, y_predictions = make_predictions(key, config, params, X_batch, log_likelihood, K)
     labels = jnp.argmax(y_batch, axis=1)
     accuracy = 100.0 * jnp.mean(y_predictions == labels)
     return key, accuracy
 
-def log_likelyhood_A(z, logit_q_z_xy, logit_p_x_yz, logit_p_y_z):
+def log_likelihood_A(z, logit_q_z_xy, logit_p_x_yz, logit_p_y_z):
         return -loss_A(z, logit_q_z_xy, logit_p_x_yz, logit_p_y_z)

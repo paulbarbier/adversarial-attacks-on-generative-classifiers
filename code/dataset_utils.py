@@ -5,6 +5,9 @@ from torch.utils import data
 from torchvision.datasets import FashionMNIST, MNIST
 import numpy as np
 
+from torch import Generator
+from torch.utils.data import random_split
+
 #https://jax.readthedocs.io/en/latest/notebooks/Neural_Network_and_Data_Loading.html#data-loading-with-pytorch
 
 def numpy_collate(batch):
@@ -33,36 +36,30 @@ class TransformImage:
         return np.array(image).reshape(28, 28, 1)/255.0
  
 
-def get_dataset(name: str):
+def get_dataset(name: str, train: bool):
     if name == "fashion-mnist":
-        fashion_mnist_train_ds = FashionMNIST(
+        fashion_mnist_ds = FashionMNIST(
             './data/', 
             download=True,
-            train=True,
+            train=train,
             transform=TransformImage(),
         )
-        fashion_mnist_test_ds = FashionMNIST(
-            './data/', 
-            download=True, 
-            train=False,
-        )
-        return fashion_mnist_train_ds, fashion_mnist_test_ds
+        return fashion_mnist_ds
     elif name == "mnist":
-        mnist_train_ds = MNIST(
+        mnist_ds = MNIST(
             './data/', 
             download=True,
-            train=True,
+            train=train,
             transform=TransformImage(),
         )
-        mnist_test_ds = MNIST(
-            './data/', 
-            download=True, 
-            train=False,
-        )
-        return mnist_train_ds, mnist_test_ds
+        return mnist_ds
     else:
       raise NotImplementedError
-    
+
+def split_dataset(ds, lengths, seed):
+    generator = Generator().manual_seed(seed)
+    splits = random_split(ds, lengths, generator=generator)
+    return splits
 
 def get_dataloader(dataset: data.Dataset, batch_size: int, shuffle: bool = True) -> data.DataLoader:
     dataloader = NumpyLoader(

@@ -11,10 +11,14 @@ def get_config():
 
   # params about the dataset
   config.dataset = "fashion-mnist"
+  config.n_train = 50000
+  config.n_test = 10000
+  config.n_classes = 10
 
   # training params
   config.dtype = "float32"
-  config.batch_size = 50
+  config.train_batch_size = 50
+  config.test_batch_size = 100
   config.optimiser = "adam"
   config.learning_rate = 1e-4
   config.num_epochs = 2

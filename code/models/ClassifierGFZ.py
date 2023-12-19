@@ -29,29 +29,29 @@ class GFZConfiguration:
     px_yz: PX_YZConfiguration
     py_z: PY_ZConfiguration
 
-def create_model_config(config: ConfigDict, dataset_config: ConfigDict) -> GFZConfiguration:
+def create_model_config(config: ConfigDict) -> GFZConfiguration:
     model_config = GFZConfiguration(
-        image_shape=dataset_config.image_shape,
-        n_classes=dataset_config.n_classes,
+        image_shape=(config.image_height, config.image_width, config.image_channels),
+        n_classes=config.n_classes,
         d_latent=config.model.d_latent,
         K=config.model.K,
 
         qz_xy=QZ_XYConfiguration(
-            n_classes=dataset_config.n_classes,
+            n_classes=config.n_classes,
             d_latent=config.model.d_latent,
             d_hidden=config.model.d_hidden,
             dropout_rate=config.model.dropout_rate,
         ),
 
         px_yz=PX_YZConfiguration(
-            n_classes=dataset_config.n_classes,
+            n_classes=config.n_classes,
             d_latent=config.model.d_latent,
             d_hidden=config.model.d_hidden,
             dropout_rate=config.model.dropout_rate,
         ),
 
         py_z=PY_ZConfiguration(
-            n_classes=dataset_config.n_classes,
+            n_classes=config.n_classes,
             d_latent=config.model.d_latent,
             d_hidden=config.model.d_hidden,
             dropout_rate=config.model.dropout_rate,

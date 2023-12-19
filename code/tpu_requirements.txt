@@ -1,0 +1,11 @@
+absl_py
+flax
+jax[gpu]
+matplotlib
+ml_collections
+numpy
+orbax
+optax
+torch
+torchvision
+tqdm

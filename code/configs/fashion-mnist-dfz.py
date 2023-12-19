@@ -17,8 +17,8 @@ def get_config():
 
   # training params
   config.dtype = "float32"
-  config.train_batch_size = 50
-  config.test_batch_size = 100
+  config.train_batch_size = 100 
+  config.test_batch_size = 200
   config.optimiser = "adam"
   config.learning_rate = 1e-4
   config.num_epochs = 50
@@ -29,6 +29,6 @@ def get_config():
   config.model.d_latent = 64
   config.model.d_hidden = 500
   config.model.K = 10
-  config.model.dropout_rate = 0.1
+  config.model.dropout_rate = 0.5
 
   return config

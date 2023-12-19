@@ -1,5 +1,4 @@
 import jax
-from jax.typing import DTypeLike
 from flax import struct
 from flax import linen as nn
 import jax.numpy as jnp
@@ -74,7 +73,7 @@ class ClassifierDFZ(nn.Module):
 classifier = lambda config: ClassifierDFZ(config)
 
 # create an instance of Classifier and init the params
-def init_params(key, config: DFZConfiguration, dtype: DTypeLike = jnp.float32):
+def init_params(key, config: DFZConfiguration, dtype = jnp.float32):
     X = jnp.ones(config.image_shape, dtype=dtype)
     y = jnp.ones(config.n_classes, dtype=dtype)
     epsilon = jnp.ones(config.d_latent, dtype=dtype)

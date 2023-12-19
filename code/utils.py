@@ -3,7 +3,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import jax.numpy as jnp
 import jax
-from jax.typing import DTypeLike
 from jax.nn import one_hot
 from ml_collections import ConfigDict, config_dict
 from torch.utils import data
@@ -27,7 +26,7 @@ def get_data_config(dataset: data.Dataset) -> ConfigDict:
     config.n_images = len(dataset.targets)
     return config
 
-def prepare_test_dataset(dataset: data.Dataset, dataset_config: ConfigDict, dtype: DTypeLike):
+def prepare_test_dataset(dataset: data.Dataset, dataset_config: ConfigDict, dtype):
     image_shape = (-1,) + dataset_config.image_shape
     images = jnp.array(dataset.data, dtype=dtype).reshape(image_shape)/255.0
     labels = one_hot(jnp.array(dataset.targets, dtype=dtype), dataset_config.n_classes)

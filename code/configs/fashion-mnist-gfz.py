@@ -14,6 +14,9 @@ def get_config():
   config.n_train = 50000
   config.n_test = 10000
   config.n_classes = 10
+  config.image_width = 28
+  config.image_height = 28
+  config.image_channels = 1
 
   # training params
   config.dtype = "float32"

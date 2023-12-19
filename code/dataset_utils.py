@@ -1,5 +1,4 @@
 from jax import tree_map
-from jax.typing import DTypeLike
 import jax.numpy as jnp
 from torch.utils import data
 from torchvision.datasets import FashionMNIST, MNIST

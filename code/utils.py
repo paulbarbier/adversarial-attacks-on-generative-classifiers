@@ -2,6 +2,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 import jax.numpy as jnp
+import jax
 from jax.typing import DTypeLike
 from jax.nn import one_hot
 from ml_collections import ConfigDict, config_dict
@@ -10,6 +11,8 @@ import orbax.checkpoint as ocp
 
 import models.ClassifierGFZ as ClassifierGFZ
 import models.ClassifierDFZ as ClassifierDFZ
+
+import attacks.DeepFool as DeepFool
 
 def plot_image(image):
     plt.imshow(image, interpolation='nearest')
@@ -51,3 +54,14 @@ def get_classifier(config: ConfigDict):
     else:
         raise NotImplementedError(config.model_name)
     return classifier
+
+def get_attack_model(config: ConfigDict):
+    if config.attack_name == "deepfool":
+        attack_model = DeepFool
+    else:
+        raise NotImplementedError(config.attack_name)
+    return attack_model
+
+@jax.vmap
+def perturbation_norm(truth, predicted):
+    return jnp.linalg.norm(truth - predicted) / jnp.linalg.norm(truth)

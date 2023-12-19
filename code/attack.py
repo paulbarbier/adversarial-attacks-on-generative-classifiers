@@ -1,12 +1,12 @@
 from jax import random
-from ml_collections import ConfigDict
+from ml_collections import ConfigDict, config_flags
 from tqdm import tqdm
 
 from dataset_utils import get_dataloader, get_dataset
-from utils import get_classifier, get_dtype, load_checkpoint
-from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score, confusion_matrix
+from utils import get_attack_model, get_classifier, get_dtype, load_checkpoint, perturbation_norm
 from jax import random
 import jax.numpy as jnp
+import numpy as np
 from jax.nn import one_hot
 import orbax.checkpoint as ocp
 
@@ -14,7 +14,7 @@ from absl import app
 from absl import flags
 from pathlib import Path
 
-def evaluate(flags):
+def attack(flags):
   checkpoint = load_checkpoint(Path.cwd() / Path(flags.checkpoint))
 
   config = ConfigDict(checkpoint["config"])
@@ -35,75 +35,79 @@ def evaluate(flags):
 
   model_config = classifier.create_model_config(config)
   log_likelihood_fn = classifier.log_likelihood_A
-  loss_fn = classifier.loss_A
   params = checkpoint["params"]
 
-  eval_key = random.PRNGKey(config.eval_seed)
+  model_data = (classifier, model_config, params, log_likelihood_fn, K)
+
+  attack_key = random.PRNGKey(config.attack_seed)
+  attack_key, test_key = random.split(attack_key)
 
   #sink for the metric values
   metrics = {
-    "loss": [],
-    "accuracy": [],
-    "f1_score_micro": [],
-    "f1_score_macro": [],
-    "precision_micro": [],
-    "precision_macro": [],
-    "recall_micro": [],
-    "recall_macro": [],
-    "confusion_matrix": [],
+    "labels": [],
+    "predictions": [],
+    "corrupted_images": [],
+    "pertubation_norms": [],
+    "attack_success_rate": [],
   }
 
-  y_true, y_predictions, eval_losses = [], [], []
-  with tqdm(eval_dl, unit="batch") as teval:
-    teval.set_description(f"Evaluation")
-    for eval_step, (X_batch, y_batch) in enumerate(teval):
-      if flags.debug and eval_step == 2:
+  attack_model = get_attack_model(flags.config)
+
+  with tqdm(eval_dl, unit="batch") as tattack:
+    tattack.set_description(f"Attack {flags.type}")
+    for attack_step, (X_batch, y_batch) in enumerate(tattack):
+      if flags.debug and attack_step == 1:
         break
-      y_batch_one_hot = one_hot(y_batch, config.n_classes)
+
+      attack_key, X_corrupted_batch = attack_model.corrupt_batch(
+        attack_key, 
+        model_data,
+        flags.config, # attack config
+        X_batch, 
+        y_batch
+      )
 
       # compute batch prediction
-      eval_key, y_pred_batch = classifier.make_predictions(
-        eval_key, model_config, params, X_batch, log_likelihood_fn
+      test_key, y_pred_batch = classifier.make_predictions(
+        test_key, model_config, params, X_batch, log_likelihood_fn
       )
-      y_predictions.append(y_pred_batch)
-      y_true.append(y_batch)
 
-      # compute batch loss
-      eval_key, batch_loss = classifier.compute_batch_loss(
-        eval_key, model_config, params, X_batch, y_batch_one_hot, loss_fn
+      metrics["corrupted_images"].append(X_corrupted_batch)
+      metrics["labels"].append(y_batch)
+      metrics["predictions"].append(y_pred_batch)
+
+      corrupted_indices = y_pred_batch != y_batch
+      X_corrupted_success = jnp.take(X_corrupted_batch, corrupted_indices, axis=0)
+      X_batch_success = jnp.take(X_batch, corrupted_indices, axis=0)
+
+      metrics["pertubation_norms"].append(
+        perturbation_norm(X_corrupted_success, X_batch_success)
       )
-      eval_losses.append(batch_loss)
-
-  y_true = jnp.concatenate(y_true)
-  y_predictions = jnp.concatenate(y_predictions)
-  eval_losses = jnp.array(eval_losses)
-
-  metrics["accuracy"].append(accuracy_score(y_true, y_predictions))
-  metrics["precision_micro"].append(precision_score(y_true, y_predictions, average="micro"))
-  metrics["precision_macro"].append(precision_score(y_true, y_predictions, average="macro"))
-  metrics["f1_score_micro"].append(f1_score(y_true, y_predictions, average="micro"))
-  metrics["f1_score_macro"].append(f1_score(y_true, y_predictions, average="macro"))
-  metrics["recall_micro"].append(recall_score(y_true, y_predictions, average="micro"))
-  metrics["recall_macro"].append(recall_score(y_true, y_predictions, average="macro"))
-  metrics["confusion_matrix"].append(confusion_matrix(y_true, y_predictions))
-  metrics["loss"].append(jnp.mean(eval_losses))
-
-  metric_keys = ["loss", "accuracy", "precision_micro", "precision_macro", "recall_micro", "recall_macro", "f1_score_micro", "f1_score_macro"]
-  print("\n".join(f"{key}: {metrics[key][-1]:.3f}" for key in metric_keys))
-
-  print("Confusion matrix:")
-  print(metrics["confusion_matrix"][-1])
-
+      metrics["attack_success_rate"].append(
+        jnp.mean(corrupted_indices)
+      )
+      tattack.set_postfix(
+        success_rate=metrics["attack_success_rate"][-1],
+        mean_perturbation_norm=jnp.mean(metrics["pertubation_norms"][-1]),
+      )
 
 FLAGS = flags.FLAGS
 
+config_flags.DEFINE_config_file(
+    'config',
+    None,
+    'path to attack configuration file.',
+    lock_config=True,
+)
+
 flags.DEFINE_string("checkpoint", "", "Checkpoint relative path.")
 flags.DEFINE_string("dtype", "", "dtype")
+flags.DEFINE_string("type", "deepfool", "Attack type (deepfool, ...)")
 flags.DEFINE_bool("debug", False, "debug flag")
 flags.DEFINE_integer("K", -1, "number of samples to use for importance sampling")
 
 def main(argv):
-  evaluate(FLAGS)
+  attack(FLAGS)
 
 if __name__ == '__main__':
   app.run(main)

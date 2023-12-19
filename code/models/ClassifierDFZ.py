@@ -71,6 +71,8 @@ class ClassifierDFZ(nn.Module):
         logit_p_y_xz = LogPY_XZ(config.py_xz)(X, y, z, train)
         return z, logit_q_z_xy, logit_p_x_z, logit_p_y_xz
 
+classifier = lambda config: ClassifierDFZ(config)
+
 # create an instance of Classifier and init the params
 def init_params(key, config: DFZConfiguration, dtype: DTypeLike = jnp.float32):
     X = jnp.ones(config.image_shape, dtype=dtype)
@@ -144,6 +146,28 @@ def make_predictions(key, config: DFZConfiguration, params, X, log_likelihood, K
     
     y_predictions = jax.vmap(make_single_prediction)(X, epsilon)
     return key, y_predictions
+
+def make_deterministic_predictions(config: DFZConfiguration, params, log_likelihood, X, y_probe, epsilon, K = None): # X: (batch_size, image_size, image_size, 1)
+    if K is None:
+        K = config.K
+
+    @jax.jit
+    def make_single_prediction(x, epsilon):
+        z, logit_q_z_xy, logit_p_x_z, logit_p_y_xz = jax.vmap(
+            partial(ClassifierDFZ(config).apply, {'params': params}, train=False),
+            in_axes=(None, 0, 0)
+        )(x, y_probe, epsilon)
+
+        ll = log_likelihood(
+            z, logit_q_z_xy, logit_p_x_z, logit_p_y_xz
+        ).reshape(config.n_classes, K)
+
+        p_bayes = nn.softmax(logsumexp(ll, axis=1) - np.log(K))
+        y_prediction = jnp.argmax(p_bayes)
+        return y_prediction
+    
+    y_predictions = jax.vmap(make_single_prediction)(X, epsilon)
+    return y_predictions
 
 # ll stands for log-likelihood
 def loss_A_single(z, logit_q_z_xy, logit_p_x_z, logit_p_y_xz):

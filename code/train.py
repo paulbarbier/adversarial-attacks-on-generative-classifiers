@@ -47,22 +47,6 @@ def train_and_evaluate(flags):
 
     # split training/test keys
     key, training_key, dropout_key, test_key = random.split(key, 4)
-
-    #sink for the metric values
-    metrics = {
-        "training_steps": [],
-        "test_steps": [],
-        "training_loss": [],
-        "test_loss": [],
-        "test_accuracy": [],
-        "test_f1_score_micro": [],
-        "test_f1_score_macro": [],
-        "test_precision_micro": [],
-        "test_precision_macro": [],
-        "test_recall_micro": [],
-        "test_recall_macro": [],
-        "test_confusion_matrix": None,
-    }
     
     epsilon_shape = (config.train_batch_size, config.model.d_latent)
     log_likelihood_fn = classifier.log_likelihood_A
@@ -71,6 +55,21 @@ def train_and_evaluate(flags):
 
     # training loop
     for epoch in range(1, config.num_epochs+1):
+        #sink for the metric values
+        metrics = {
+            "training_steps": [],
+            "test_steps": [],
+            "training_loss": [],
+            "test_loss": [],
+            "test_accuracy": [],
+            "test_f1_score_micro": [],
+            "test_f1_score_macro": [],
+            "test_precision_micro": [],
+            "test_precision_macro": [],
+            "test_recall_micro": [],
+            "test_recall_macro": [],
+            "test_confusion_matrix": None,
+        }
         with tqdm(train_dl, unit="batch") as train_epoch:
             train_epoch.set_description(f"Train epoch #{epoch}")
             for train_step, (X_batch, y_batch) in enumerate(train_epoch):

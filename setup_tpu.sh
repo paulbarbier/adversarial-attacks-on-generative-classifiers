@@ -8,5 +8,3 @@ python3 -m pip install --upgrade pip
 python3 -m pip install -r tpu_requirements.txt
 python3 -m pip install jax[tpu] -f https://storage.googleapis.com/jax-releases/libtpu_releases.html
 
-python3 -m train --config=configs/fashion-mnist-dfz.py
-python3 -m train --config=configs/fashion-mnist-gfz.py

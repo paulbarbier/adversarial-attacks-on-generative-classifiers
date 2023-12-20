@@ -61,7 +61,7 @@ def train_and_evaluate(flags):
         "test_precision_macro": [],
         "test_recall_micro": [],
         "test_recall_macro": [],
-        "test_confusion_matrix": [],
+        "test_confusion_matrix": None,
     }
     
     epsilon_shape = (config.train_batch_size, config.model.d_latent)
@@ -126,7 +126,7 @@ def train_and_evaluate(flags):
             metrics["test_f1_score_macro"].append(f1_score(y_true, y_predictions, average="macro"))
             metrics["test_recall_micro"].append(recall_score(y_true, y_predictions, average="micro"))
             metrics["test_recall_macro"].append(recall_score(y_true, y_predictions, average="macro"))
-            metrics["test_confusion_matrix"].append(confusion_matrix(y_true, y_predictions))
+            metrics["test_confusion_matrix"] = confusion_matrix(y_true, y_predictions)
             metrics["test_loss"].append(jnp.mean(test_losses))
 
             metric_keys = ["test_loss", "test_accuracy", "test_precision_micro", "test_recall_micro", "test_f1_score_micro"]

@@ -31,7 +31,7 @@ def corrupt_batch(key, model, attack_config, X, y_true):
         )(x, epsilon)
         w = gradients - gradients[None,label,...]
         f = log_likelihoods - log_likelihoods[None,label]
-        perturbation = (jnp.abs(f) + 0.00001) / jnp.linalg.norm(w.squeeze(), axis=(1, 2))
+        perturbation = jnp.abs(f) / jnp.linalg.norm(w.squeeze(), axis=(1, 2))
         perturbation = perturbation.at[label].set(jnp.inf)
         idx = jnp.argmin(perturbation)
         r = perturbation[idx] * w[idx] / jnp.linalg.norm(w[idx])

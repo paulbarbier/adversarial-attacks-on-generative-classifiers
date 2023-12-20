@@ -1,5 +1,6 @@
 from functools import partial
 import jax
+from jax import random
 from jax.scipy.special import logsumexp
 from flax import linen as nn
 import jax.numpy as jnp
@@ -40,7 +41,7 @@ def corrupt_batch(key, model, attack_config, X, y_true):
     X_corrupted = jnp.copy(X)
     perturbation = jnp.zeros_like(X_corrupted)
     epsilon_shape = (model_config.n_classes * K, model_config.d_latent)
-    
+
     key, y_corrupted = classifier.make_predictions(
         key, model_config, params, log_likelihood, X_corrupted
     )
@@ -57,10 +58,9 @@ def corrupt_batch(key, model, attack_config, X, y_true):
         )
         
         key, y_corrupted = classifier.make_predictions(
-            key, model_config, params, log_likelihood, X_corrupted
+            key, model_config, params, log_likelihood, X_corrupted[target_indices]
         )
-        target_indices = target_indices * (y_corrupted == y_true)
+        target_indices = target_indices.at[target_indices].set(y_corrupted == y_true[target_indices])
         iteration += 1
-        print(iteration, target_indices.sum())
     
     return key, X_corrupted

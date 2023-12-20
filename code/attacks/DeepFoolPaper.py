@@ -61,6 +61,5 @@ def corrupt_batch(key, model, attack_config, X, y_true):
         )
         target_indices = y_corrupted == y_true
         iteration += 1
-        print(iteration, target_indices.sum())
     
     return key, X_corrupted

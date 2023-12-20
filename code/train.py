@@ -136,7 +136,7 @@ def train_and_evaluate(flags):
                 checkpointer.save(
                     CHECKPOINT_DIR / f"{config.checkpoint_name}-{epoch}",
                     {
-                        "config": config.to_dict(),
+                        "config": config,
                         "model_config": model_config,
                         "params": training_state.params,
                         "metrics": metrics, 

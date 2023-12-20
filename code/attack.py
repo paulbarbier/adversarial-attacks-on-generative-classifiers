@@ -14,6 +14,8 @@ from absl import app
 from absl import flags
 from pathlib import Path
 
+CHECKPOINT_DIR = Path.cwd() / Path("checkpoints")
+
 def attack(flags):
   checkpoint = load_checkpoint(Path.cwd() / Path(flags.checkpoint))
 
@@ -73,16 +75,12 @@ def attack(flags):
         test_key, model_config, params, log_likelihood_fn, X_corrupted_batch
       )
 
-      metrics["corrupted_images"].append(X_corrupted_batch)
-      metrics["labels"].append(y_batch)
-      metrics["predictions"].append(y_pred_batch)
-
       corrupted_indices = y_pred_batch != y_batch
       X_corrupted_success = jnp.take(X_corrupted_batch, corrupted_indices, axis=0)
       X_batch_success = jnp.take(X_batch, corrupted_indices, axis=0)
 
       metrics["pertubation_norms"].append(
-        perturbation_norm(X_corrupted_success, X_batch_success)
+        jnp.mean(perturbation_norm(X_corrupted_success, X_batch_success))
       )
       metrics["attack_success_rate"].append(
         jnp.mean(corrupted_indices)
@@ -91,6 +89,18 @@ def attack(flags):
         success_rate=metrics["attack_success_rate"][-1],
         mean_perturbation_norm=jnp.mean(metrics["pertubation_norms"][-1]),
       )
+  
+  metrics["pertubation_norms"] = np.mean(metrics["pertubation_norms"])
+  metrics["attack_success_rate"] = np.mean(metrics["attack_success_rate"])
+
+  checkpointer = ocp.PyTreeCheckpointer()
+  checkpointer.save(
+    CHECKPOINT_DIR / f"{config.checkpoint_name}-attack-{flags.config.checkpoint_name}", 
+    {
+      "metrics": metrics,
+      "attack_config": flags.config.to_dict(),
+    }
+  )
 
 FLAGS = flags.FLAGS
 

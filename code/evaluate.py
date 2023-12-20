@@ -14,6 +14,8 @@ from absl import app
 from absl import flags
 from pathlib import Path
 
+CHECKPOINT_DIR = Path.cwd() / Path("checkpoints")
+
 def evaluate(flags):
   checkpoint = load_checkpoint(Path.cwd() / Path(flags.checkpoint))
 
@@ -40,24 +42,11 @@ def evaluate(flags):
 
   eval_key = random.PRNGKey(config.eval_seed)
 
-  #sink for the metric values
-  metrics = {
-    "loss": [],
-    "accuracy": [],
-    "f1_score_micro": [],
-    "f1_score_macro": [],
-    "precision_micro": [],
-    "precision_macro": [],
-    "recall_micro": [],
-    "recall_macro": [],
-    "confusion_matrix": [],
-  }
-
   y_true, y_predictions, eval_losses = [], [], []
   with tqdm(eval_dl, unit="batch") as teval:
     teval.set_description(f"Evaluation")
     for eval_step, (X_batch, y_batch) in enumerate(teval):
-      if flags.debug and eval_step == 5:
+      if flags.debug and eval_step == 1:
         break
       y_batch_one_hot = one_hot(y_batch, config.n_classes)
 
@@ -78,22 +67,27 @@ def evaluate(flags):
   y_predictions = jnp.concatenate(y_predictions)
   eval_losses = jnp.array(eval_losses)
 
-  metrics["accuracy"].append(accuracy_score(y_true, y_predictions))
-  metrics["precision_micro"].append(precision_score(y_true, y_predictions, average="micro"))
-  metrics["precision_macro"].append(precision_score(y_true, y_predictions, average="macro"))
-  metrics["f1_score_micro"].append(f1_score(y_true, y_predictions, average="micro"))
-  metrics["f1_score_macro"].append(f1_score(y_true, y_predictions, average="macro"))
-  metrics["recall_micro"].append(recall_score(y_true, y_predictions, average="micro"))
-  metrics["recall_macro"].append(recall_score(y_true, y_predictions, average="macro"))
-  metrics["confusion_matrix"].append(confusion_matrix(y_true, y_predictions))
-  metrics["loss"].append(jnp.mean(eval_losses))
+
+  metrics = {}
+  metrics["accuracy"] = accuracy_score(y_true, y_predictions)
+  metrics["precision_micro"] = precision_score(y_true, y_predictions, average="micro")
+  metrics["precision_macro"] = precision_score(y_true, y_predictions, average="macro")
+  metrics["f1_score_micro"] = f1_score(y_true, y_predictions, average="micro")
+  metrics["f1_score_macro"] = f1_score(y_true, y_predictions, average="macro")
+  metrics["recall_micro"] = recall_score(y_true, y_predictions, average="micro")
+  metrics["recall_macro"] = recall_score(y_true, y_predictions, average="macro")
+  metrics["confusion_matrix"] = confusion_matrix(y_true, y_predictions)
+  metrics["loss"] = jnp.mean(eval_losses)
+
+  checkpointer = ocp.PyTreeCheckpointer()
+  checkpointer.save(CHECKPOINT_DIR / f"{config.checkpoint_name}-evaluation", metrics)
 
   metric_keys = ["loss", "accuracy", "precision_micro", "precision_macro", "recall_micro", "recall_macro", "f1_score_micro", "f1_score_macro"]
-  print("\n".join(f"{key}: {metrics[key][-1]:.3f}" for key in metric_keys))
+  print("Evaluation metrics")
+  print("\n".join(f"{key}: {metrics[key]:.3f}" for key in metric_keys))
 
   print("Confusion matrix:")
-  print(metrics["confusion_matrix"][-1])
-
+  print(metrics["confusion_matrix"])
 
 FLAGS = flags.FLAGS
 

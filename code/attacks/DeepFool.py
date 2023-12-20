@@ -9,7 +9,7 @@ from models.utils import sample_gaussian
 
 
 def corrupt_batch(key, model, attack_config, X, y_true):
-    classifier, model_config, params, log_likelihood, K = model
+    classifier, model_config, params, log_likelihood, loss_single, K = model
     dtype = X.dtype
 
     y_probe = nn.one_hot(jnp.repeat(jnp.arange(model_config.n_classes, dtype=dtype), K), model_config.n_classes)
@@ -48,7 +48,7 @@ def corrupt_batch(key, model, attack_config, X, y_true):
     key, y_corrupted = classifier.make_predictions(
         key, model_config, params, log_likelihood, X_corrupted
     )
-    target_indices = y_corrupted == y_true 
+    target_indices = y_corrupted == y_corrupted 
     
     iteration = 0
     while jnp.any(target_indices) and iteration < attack_config.max_iter:

@@ -5,5 +5,6 @@ def get_config():
 
   config.attack_name = "fastgradientsign"
   config.eta = 0.3
+  config.attack_batch_size = 100
 
   return config

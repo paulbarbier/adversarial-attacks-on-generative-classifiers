@@ -35,9 +35,10 @@ def attack(flags):
 
   model_config = classifier.create_model_config(config)
   log_likelihood_fn = classifier.log_likelihood_A
+  loss_single_fn = classifier.loss_A_single
   params = checkpoint["params"]
 
-  model_data = (classifier, model_config, params, log_likelihood_fn, K)
+  model_data = (classifier, model_config, params, log_likelihood_fn, loss_single_fn, K)
 
   attack_key = random.PRNGKey(config.attack_seed)
   attack_key, test_key = random.split(attack_key)

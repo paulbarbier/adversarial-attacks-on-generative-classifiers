@@ -13,6 +13,8 @@ def corrupt_batch(key, model, attack_config, X, y_true):
     dtype = X.dtype
 
     y_probe = nn.one_hot(jnp.repeat(jnp.arange(model_config.n_classes, dtype=dtype), K), model_config.n_classes)
+
+    @jax.jit 
     def compute_single_ll(x, epsilon):
         logits = jax.vmap(
             partial(classifier.classifier(model_config).apply, {'params': params}, train=False),
@@ -25,21 +27,22 @@ def corrupt_batch(key, model, attack_config, X, y_true):
     
     @jax.jit
     @jax.vmap
-    def pertubation_step(x, epsilon, label):
-        log_likelihoods = compute_single_ll(x, epsilon)
-        gradients = jax.jacrev(
+    def pertubation_step(x, epsilon):
+        ll = compute_single_ll(x, epsilon)
+        y = jnp.argmax(ll)
+        grads = jax.jacrev(
             compute_single_ll, argnums=0
         )(x, epsilon)
-        w = gradients - gradients[None,label,...]
-        f = log_likelihoods - log_likelihoods[None,label]
-        perturbation = jnp.abs(f) / jnp.linalg.norm(w.squeeze(), axis=(1, 2))
-        perturbation = perturbation.at[label].set(jnp.inf)
+        w = grads - grads[None, y, ...]
+        f = ll - ll[None, y]
+        w_norm = jnp.linalg.norm(w.squeeze(), axis=(1, 2))
+        perturbation = jnp.abs(f) / w_norm
+        perturbation = perturbation.at[y].set(jnp.inf)
         idx = jnp.argmin(perturbation)
-        r = perturbation[idx] * w[idx] / jnp.linalg.norm(w[idx])
+        r = perturbation[idx] * w[idx] / w_norm[idx]
         return r
 
     X_corrupted = jnp.copy(X)
-    perturbation = jnp.zeros_like(X_corrupted)
     epsilon_shape = (model_config.n_classes * K, model_config.d_latent)
 
     key, y_corrupted = classifier.make_predictions(
@@ -50,9 +53,8 @@ def corrupt_batch(key, model, attack_config, X, y_true):
     iteration = 0
     while jnp.any(target_indices) and iteration < attack_config.max_iter:
         X_targeted = X_corrupted[target_indices]
-        y_true_targeted = y_true[target_indices]
         key, epsilon = sample_gaussian(key, (X_targeted.shape[0],) + epsilon_shape, dtype)
-        perturbation = pertubation_step(X_targeted, epsilon, y_true_targeted)
+        perturbation = pertubation_step(X_targeted, epsilon)
         X_corrupted = X_corrupted.at[target_indices].set(
             X_targeted + attack_config.learning_rate * perturbation
         )
@@ -60,7 +62,9 @@ def corrupt_batch(key, model, attack_config, X, y_true):
         key, y_corrupted = classifier.make_predictions(
             key, model_config, params, log_likelihood, X_corrupted[target_indices]
         )
-        target_indices = target_indices.at[target_indices].set(y_corrupted == y_true[target_indices])
+        target_indices = target_indices.at[target_indices].set(
+            y_corrupted == y_true[target_indices]
+        )
         iteration += 1
     
     return key, X_corrupted

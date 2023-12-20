@@ -32,3 +32,32 @@ def prepare_test_dataset(dataset: data.Dataset, dataset_config: ConfigDict):
 def load_checkpoint(path: Path) -> object:
     checkpointer = ocp.PyTreeCheckpointer()
     return checkpointer.restore(path) 
+
+def get_dtype(dtype_option: str):
+    if dtype_option == "float32":
+        dtype = jnp.float32
+    elif dtype_option == "bfloat16":
+        dtype = jnp.bfloat16
+    else:
+        raise NotImplementedError(dtype_option)
+    return dtype
+
+def get_classifier(config: ConfigDict):
+    if config.model_name == "GFZ":
+        classifier = ClassifierGFZ
+    elif config.model_name == "DFZ":
+        classifier = ClassifierDFZ
+    else:
+        raise NotImplementedError(config.model_name)
+    return classifier
+
+def get_attack_model(config: ConfigDict):
+    if config.attack_name == "deepfool":
+        attack_model = DeepFool
+    else:
+        raise NotImplementedError(config.attack_name)
+    return attack_model
+
+@jax.vmap
+def perturbation_norm(truth, predicted):
+    return jnp.linalg.norm(truth - predicted) / jnp.linalg.norm(truth)

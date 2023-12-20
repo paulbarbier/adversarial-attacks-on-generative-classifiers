@@ -120,32 +120,40 @@ def training_step(state: TrainState, X_batch, y_batch, epsilon, loss_single, dro
   )
   return new_state, loss
 
-# make batch prediction of X using the ll function and the sampling parameter K
-def make_predictions(key, config: GFZConfiguration, params, X, log_likelihood, K = None): # X: (batch_size, image_size, image_size, 1)
+# compute logits for batch 
+def compute_logits(key, config: GFZConfiguration, params, log_likelihood, X, K = None): # X: (batch_size, image_size, image_size, 1)
     if K is None:
         K = config.K
-    batch_size = X.shape[0]
-    key, epsilon = sample_gaussian(key, (batch_size, config.n_classes * K, config.d_latent))
-    y = nn.one_hot(jnp.repeat(jnp.arange(config.n_classes), K), config.n_classes, dtype=X.dtype)
+    dtype = X.dtype
+    key, epsilon = sample_gaussian(key, (X.shape[0], config.n_classes * K, config.d_latent), dtype)
+    y_prob = nn.one_hot(jnp.repeat(jnp.arange(config.n_classes, dtype=dtype), K), config.n_classes)
 
     @jax.jit
-    def make_single_prediction(x, epsilon):
-        z, logit_q_z_xy, logit_p_x_yz, logit_p_y_z = jax.vmap(
+    @jax.vmap
+    def compute_single_ll(x, epsilon):
+        logits = jax.vmap(
             partial(ClassifierGFZ(config).apply, {'params': params}, train=False),
             in_axes=(None, 0, 0)
-        )(x, y, epsilon)
+        )(x, y_prob, epsilon)
 
-        ll = log_likelihood(
-            z, logit_q_z_xy, logit_p_x_yz, logit_p_y_z
-        ).reshape(config.n_classes, K)
-
-        p_bayes = nn.softmax(logsumexp(ll, axis=1) - np.log(K))
-        y_prediction = jnp.argmax(p_bayes)
-        return y_prediction
+        ll = log_likelihood(*logits).reshape(config.n_classes, K)
+        ll = logsumexp(ll, axis=1) - np.log(K)
+        return ll
     
-    y_predictions = jax.vmap(make_single_prediction)(X, epsilon)
-    return key, y_predictions
+    ll = compute_single_ll(X, epsilon)
+    return key, ll
 
+# make batch prediction of X using the ll function and the sampling parameter K
+def make_predictions(key, config: GFZConfiguration, params, log_likelihood, X, K = None): # X: (batch_size, image_size, image_size, 1)
+    if K is None:
+        K = config.K
+    key, ll = compute_logits(key, config, params, log_likelihood, X, K)
+
+    p_bayes = nn.softmax(ll)
+    predictions = jnp.argmax(p_bayes, axis=-1)
+    return key, predictions
+
+#TODO: remove when done!
 def make_deterministic_predictions(config: GFZConfiguration, params, log_likelihood, X, y_probe, epsilon, K = None): # X: (batch_size, image_size, image_size, 1)
     if K is None:
         K = config.K
@@ -177,7 +185,7 @@ def loss_A_single(z, logit_q_z_xy, logit_p_x_yz, logit_p_y_z):
 loss_A = jax.vmap(loss_A_single)
 
 def compute_batch_loss(key, config: GFZConfiguration, params, X_batch, y_batch, loss_fn):
-    key, epsilon = sample_gaussian(key, (X_batch.shape[0], config.d_latent))
+    key, epsilon = sample_gaussian(key, (X_batch.shape[0], config.d_latent), X_batch.dtype)
     z, logit_q_z_xy, logit_p_x_yz, logit_p_y_z = jax.vmap(
         partial(ClassifierGFZ(config).apply, {'params': params}, train=False),
         in_axes=(0, 0, 0)

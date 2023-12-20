@@ -12,6 +12,7 @@ import models.ClassifierGFZ as ClassifierGFZ
 import models.ClassifierDFZ as ClassifierDFZ
 
 import attacks.DeepFool as DeepFool
+import attacks.DeepFoolPaper as DeepFoolPaper
 
 def plot_image(image):
     plt.imshow(image, interpolation='nearest')
@@ -57,6 +58,8 @@ def get_classifier(config: ConfigDict):
 def get_attack_model(config: ConfigDict):
     if config.attack_name == "deepfool":
         attack_model = DeepFool
+    elif config.attack_name == "deepfoolpaper":
+        attack_model = DeepFoolPaper
     else:
         raise NotImplementedError(config.attack_name)
     return attack_model

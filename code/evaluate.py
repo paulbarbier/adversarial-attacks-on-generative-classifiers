@@ -30,8 +30,8 @@ def evaluate(flags):
 
   classifier = get_classifier(config) 
 
-  eval_ds = get_dataset(config.dataset, train=False)
-  eval_dl = get_dataloader(eval_ds, config.test_batch_size, dtype)
+  eval_ds = get_dataset(config.dataset, train=False, dtype=dtype)
+  eval_dl = get_dataloader(eval_ds, 50, shuffle=False)
 
   model_config = classifier.create_model_config(config)
   log_likelihood_fn = classifier.log_likelihood_A
@@ -57,13 +57,13 @@ def evaluate(flags):
   with tqdm(eval_dl, unit="batch") as teval:
     teval.set_description(f"Evaluation")
     for eval_step, (X_batch, y_batch) in enumerate(teval):
-      if flags.debug and eval_step == 2:
+      if flags.debug and eval_step == 5:
         break
       y_batch_one_hot = one_hot(y_batch, config.n_classes)
 
       # compute batch prediction
       eval_key, y_pred_batch = classifier.make_predictions(
-        eval_key, model_config, params, X_batch, log_likelihood_fn
+        eval_key, model_config, params, log_likelihood_fn, X_batch
       )
       y_predictions.append(y_pred_batch)
       y_true.append(y_batch)

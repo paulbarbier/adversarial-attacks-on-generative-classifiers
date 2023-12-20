@@ -79,7 +79,7 @@ def train_and_evaluate(flags):
                 y_batch_one_hot = one_hot(y_batch, config.n_classes)
                 
                 # sample the prior from gaussian distribution
-                training_key, epsilon = sample_gaussian(training_key, epsilon_shape)
+                training_key, epsilon = sample_gaussian(training_key, epsilon_shape, dtype)
 
                 # training step
                 training_state, loss_value = classifier.training_step(

@@ -31,17 +31,19 @@ class NumpyLoader(data.DataLoader):
         worker_init_fn=worker_init_fn)
   
 class TransformImage:
+    def __init__(self, dtype):
+       self.dtype = dtype
     def __call__(self, image):
-        return np.array(image).reshape(28, 28, 1)/255.0
+        return np.array(image, dtype=self.dtype).reshape(28, 28, 1)/255.0
  
 
-def get_dataset(name: str, train: bool):
+def get_dataset(name: str, train: bool, dtype=jnp.float32):
     if name == "fashion-mnist":
         fashion_mnist_ds = FashionMNIST(
             './data/', 
             download=True,
             train=train,
-            transform=TransformImage(),
+            transform=TransformImage(dtype),
         )
         return fashion_mnist_ds
     elif name == "mnist":
@@ -49,7 +51,7 @@ def get_dataset(name: str, train: bool):
             './data/', 
             download=True,
             train=train,
-            transform=TransformImage(),
+            transform=TransformImage(dtype),
         )
         return mnist_ds
     else:

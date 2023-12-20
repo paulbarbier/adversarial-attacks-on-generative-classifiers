@@ -100,15 +100,17 @@ def training_step(state: TrainState, X_batch, y_batch, epsilon, loss_single, dro
   dropout_key = jax.random.fold_in(dropout_key, state.step)
 
   def batch_loss(params):
+
+    @jax.vmap
     def loss_fn(X, y, epsilon):
-      z, logit_q_z_xy, logit_p_x_z, logit_p_y_xz = state.apply_fn(
+      logits = state.apply_fn(
         {'params': params},
         X, y, epsilon,
         rngs={"dropout": dropout_key},
       )
-      return loss_single(z, logit_q_z_xy, logit_p_x_z, logit_p_y_xz)
+      return loss_single(*logits)
 
-    loss = jax.vmap(loss_fn)(X_batch, y_batch, epsilon)
+    loss = loss_fn(X_batch, y_batch, epsilon)
     return jnp.mean(loss)
 
   loss, grads = jax.value_and_grad(
@@ -120,46 +122,52 @@ def training_step(state: TrainState, X_batch, y_batch, epsilon, loss_single, dro
   )
   return new_state, loss
 
-# make batch prediction of X using the ll function and the sampling parameter K
-def make_predictions(key, config: DFZConfiguration, params, X, log_likelihood, K = None): # X: (batch_size, image_size, image_size, 1)
+# compute logits for batch 
+def compute_logits(key, config: DFZConfiguration, params, log_likelihood, X, K = None): # X: (batch_size, image_size, image_size, 1)
     if K is None:
         K = config.K
-    batch_size = X.shape[0]
-    key, epsilon = sample_gaussian(key, (batch_size, config.n_classes * K, config.d_latent))
-    y = nn.one_hot(jnp.repeat(jnp.arange(config.n_classes), K), config.n_classes, dtype=X.dtype)
+    dtype = X.dtype
+    key, epsilon = sample_gaussian(key, (X.shape[0], config.n_classes * K, config.d_latent), dtype)
+    y_prob = nn.one_hot(jnp.repeat(jnp.arange(config.n_classes, dtype=dtype), K), config.n_classes)
 
     @jax.jit
-    def make_single_prediction(x, epsilon):
-        z, logit_q_z_xy, logit_p_x_z, logit_p_y_xz = jax.vmap(
+    @jax.vmap
+    def compute_single_ll(x, epsilon):
+        logits = jax.vmap(
             partial(ClassifierDFZ(config).apply, {'params': params}, train=False),
             in_axes=(None, 0, 0)
-        )(x, y, epsilon)
+        )(x, y_prob, epsilon)
 
-        ll = log_likelihood(
-            z, logit_q_z_xy, logit_p_x_z, logit_p_y_xz
-        ).reshape(config.n_classes, K)
-
-        p_bayes = nn.softmax(logsumexp(ll, axis=1) - np.log(K))
-        y_prediction = jnp.argmax(p_bayes)
-        return y_prediction
+        ll = log_likelihood(*logits).reshape(config.n_classes, K)
+        ll = logsumexp(ll, axis=1) - np.log(K)
+        return ll
     
-    y_predictions = jax.vmap(make_single_prediction)(X, epsilon)
-    return key, y_predictions
+    ll = compute_single_ll(X, epsilon)
+    return key, ll
 
+# make batch prediction of X using the ll function and the sampling parameter K
+def make_predictions(key, config: DFZConfiguration, params, log_likelihood, X, K = None): # X: (batch_size, image_size, image_size, 1)
+    if K is None:
+        K = config.K
+    key, ll = compute_logits(key, config, params, log_likelihood, X, K)
+
+    p_bayes = nn.softmax(ll)
+    predictions = jnp.argmax(p_bayes, axis=-1)
+    return key, predictions
+
+#TODO: remove if nothing change
 def make_deterministic_predictions(config: DFZConfiguration, params, log_likelihood, X, y_probe, epsilon, K = None): # X: (batch_size, image_size, image_size, 1)
     if K is None:
         K = config.K
 
     @jax.jit
     def make_single_prediction(x, epsilon):
-        z, logit_q_z_xy, logit_p_x_z, logit_p_y_xz = jax.vmap(
+        logits = jax.vmap(
             partial(ClassifierDFZ(config).apply, {'params': params}, train=False),
             in_axes=(None, 0, 0)
         )(x, y_probe, epsilon)
 
-        ll = log_likelihood(
-            z, logit_q_z_xy, logit_p_x_z, logit_p_y_xz
-        ).reshape(config.n_classes, K)
+        ll = log_likelihood(*logits).reshape(config.n_classes, K)
 
         p_bayes = nn.softmax(logsumexp(ll, axis=1) - np.log(K))
         y_prediction = jnp.argmax(p_bayes)
@@ -177,14 +185,12 @@ def loss_A_single(z, logit_q_z_xy, logit_p_x_z, logit_p_y_xz):
 loss_A = jax.vmap(loss_A_single)
 
 def compute_batch_loss(key, config: DFZConfiguration, params, X_batch, y_batch, loss_fn):
-    key, epsilon = sample_gaussian(key, (X_batch.shape[0], config.d_latent))
-    z, logit_q_z_xy, logit_p_x_z, logit_p_y_xz = jax.vmap(
+    key, epsilon = sample_gaussian(key, (X_batch.shape[0], config.d_latent), X_batch.dtype)
+    logits = jax.vmap(
         partial(ClassifierDFZ(config).apply, {'params': params}, train=False),
         in_axes=(0, 0, 0)
     )(X_batch, y_batch, epsilon)
-    loss_value = jnp.mean(
-        loss_fn(z, logit_q_z_xy, logit_p_x_z, logit_p_y_xz)
-    )
+    loss_value = jnp.mean(loss_fn(*logits))
     return key, loss_value
 
 def compute_batch_accuracy(key, model, params, X_batch, y_batch, log_likelihood, K = None):

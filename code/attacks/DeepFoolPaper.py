@@ -59,7 +59,7 @@ def corrupt_batch(key, model, attack_config, X, y_true):
         key, y_corrupted = classifier.make_predictions(
             key, model_config, params, log_likelihood, X_corrupted
         )
-        target_indices = target_indices * (y_corrupted == y_true)
+        target_indices = y_corrupted == y_true
         iteration += 1
         print(iteration, target_indices.sum())
     

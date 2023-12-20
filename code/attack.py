@@ -54,7 +54,7 @@ def attack(flags):
   attack_model = get_attack_model(flags.config)
 
   with tqdm(eval_dl, unit="batch") as tattack:
-    tattack.set_description(f"Attack {flags.type}")
+    tattack.set_description(f"Attack {flags.config.attack_name}")
     for attack_step, (X_batch, y_batch) in enumerate(tattack):
       if flags.debug and attack_step == 1:
         break
@@ -67,9 +67,9 @@ def attack(flags):
         y_batch
       )
 
-      # compute batch prediction
+      # compute attacked batch prediction
       test_key, y_pred_batch = classifier.make_predictions(
-        test_key, model_config, params, X_batch, log_likelihood_fn
+        test_key, model_config, params, log_likelihood_fn, X_corrupted_batch
       )
 
       metrics["corrupted_images"].append(X_corrupted_batch)
@@ -102,7 +102,6 @@ config_flags.DEFINE_config_file(
 
 flags.DEFINE_string("checkpoint", "", "Checkpoint relative path.")
 flags.DEFINE_string("dtype", "", "dtype")
-flags.DEFINE_string("type", "deepfool", "Attack type (deepfool, ...)")
 flags.DEFINE_bool("debug", False, "debug flag")
 flags.DEFINE_integer("K", -1, "number of samples to use for importance sampling")
 

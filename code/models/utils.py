@@ -13,9 +13,9 @@ def transform(epsilon, mu, log_sigma):
     z = mu + sigma * epsilon
     return z
 
-def sample_gaussian(key, shape: tuple) -> np.ndarray:
+def sample_gaussian(key, shape: tuple, dtype=jnp.float32) -> np.ndarray:
     key, sample_key = random.split(key)
-    epsilon = random.normal(sample_key, shape, dtype=jnp.float32)
+    epsilon = random.normal(sample_key, shape, dtype=dtype)
     return key, epsilon
 
 # from the objax library

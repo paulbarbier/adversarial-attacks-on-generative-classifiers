@@ -1,6 +1,5 @@
 absl_py
 flax
-jax[tpu]
 scikit-learn
 matplotlib
 ml_collections

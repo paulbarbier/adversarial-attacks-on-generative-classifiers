@@ -53,8 +53,13 @@ Alexandre Lutt, ENS Paris-Saclay\\
 \section{Introduction}
 \label{sec:intro}
 
-\paragraph{} 
+\paragraph{} In this report, we will study the robustness of generative classifiers to adversarial attacks, compared to discriminative classifiers. In fact, neural networks are known to be particularly weak to adversarial networks, as proved by Goodfellow et al. in \cite{fast_gradient_sign}. 
+ 
+The main issue is that neural networks are often overconfident in their predictions, which makes them very sensitive to small perturbations of the input, even if these perturbations are imperceptible to the human eye. This issue is particularly problematic in the case of safety-critical applications, such as autonomous driving, where a small perturbation of the input can lead to a catastrophic failure, or in the case of medical applications, where a small perturbation of the input can lead to a wrong diagnosis. 
 
+Those attacks can take different forms, depending on the knowledge of the attacker regarding the model. If the attacker has access to the model's parameters and architecture, we will talk about white box attacks. Otherwise, we will talk about black box attacks. In both cases, the attacker aims to create adversarial examples, \textit{i.e.} samples which are very similar to the original samples, but which are misclassified by the model. 
+
+Knowing this, several methods have been developped to detect adversarial examples. In our case, since we mostly aim to discuss the robustness of the models, we will focus the logits-based detection method introduced in \cite{main_paper}, which aims to reject inputs using the joint density $p(\bm{x}, \bm{y})$ of the generative classifier.
 
 \section{Models}
 \label{sec:models}
@@ -63,9 +68,15 @@ Alexandre Lutt, ENS Paris-Saclay\\
 
 \subsection{Discriminative versus generative models}
 
-\paragraph{} Let us consider a dataset $\mathcal{D} = \{(\bm{x}_i, \bm{y}_i)\}_{i=1}^N$ of $N$ samples, where $\bm{x}_i \in \mathbb{R}^d$ is a $d$-dimensional feature vector and $\bm{y}_i \in \mathcal{Y}$ is the corresponding label. A discriminative classification model (or discriminative classifier) aims to estimate the conditional probability $p(\bm{y}|\bm{x})$, \textit{i.e.} the probability that the label $\bm{y}$ is associated to the feature vector $\bm{x}$. On the other hand, a generative classification model (or generative classifier) aims to estimate the joint probability $p(\bm{x}, \bm{y})$, \textit{i.e.} the probability of observing the feature vector $\bm{x}$ and the label $\bm{y}$ at the same time. Both models can be used for classification purposes, \textit{i.e.} can be used to predict the label $\bm{y}$ associated to a feature vector $\bm{x}$, but with very different interpretations. The discriminative classifier will directly estimate the conditional probability $p(\bm{y}|\bm{x})$, while the generative classifier will estimate the joint probability $p(\bm{x}, \bm{y})$ for each possible value of $\bm{y}$, and then use the Bayes rule to estimate the conditional probability $p(\bm{y}|\bm{x}) = \dfrac{p(\bm{x}|\bm{y})p(\bm{y})}{p(\bm{x})}$.
+\paragraph{} Let us consider a dataset $\mathcal{D} = \{(\bm{x}_i, \bm{y}_i)\}_{i=1}^N$ of $N$ samples, where $\bm{x}_i \in \mathbb{R}^d$ is a $d$-dimensional feature vector and $\bm{y}_i \in \mathcal{Y}$ is the corresponding label. A discriminative classification model (or discriminative classifier) aims to estimate the conditional probability $p(\bm{y}|\bm{x})$, \textit{i.e.} the probability that the label $\bm{y}$ is associated to the feature vector $\bm{x}$. On the other hand, a generative classification model (or generative classifier) aims to estimate the joint probability $p(\bm{x}, \bm{y})$, \textit{i.e.} the probability of observing the feature vector $\bm{x}$ and the label $\bm{y}$ at the same time. 
 
-\paragraph{} One of the most common generative classifier is Naive Bayes. This simple model assumes a factorised distribution $\displaystyle p(\bm{x}|\bm{y}) = \prod_{i=1}^d p(\bm{x}_i|\bm{y})$, which means that the features are independent given the label. This assumption is often far from being verified in practice for image datasets. For this reason, in the following, we will follow the path of \cite{main_paper} and use a latent-variable model $p(\bm{x}, \bm{y}, \bm{z})$ to design our generative classifier. Note that this model does not assume a factorised distribution for $p(\bm{x}|\bm{y})$, since in this case $p(\bm{x}|\bm{y}) = \displaystyle\dfrac{\int p(\bm{x}, \bm{y}, \bm{z}) d\bm{z}}{\int p(\bm{x}, \bm{y}, \bm{z}) d\bm{x} d\bm{y}}$. In order to fully define a latent-variable model, we need to explicitely chose a structure for $p(\bm{x}, \bm{y}, \bm{z})$. At this point, several choices are possible:
+Both models can be used for classification purposes, \textit{i.e.} can be used to predict the label $\bm{y}$ associated to a feature vector $\bm{x}$, but with very different interpretations. The discriminative classifier will directly estimate the conditional probability $p(\bm{y}|\bm{x})$, while the generative classifier will estimate the joint probability $p(\bm{x}, \bm{y})$ for each possible value of $\bm{y}$, and then use the Bayes rule to estimate the conditional probability $p(\bm{y}|\bm{x}) = \dfrac{p(\bm{x}|\bm{y})p(\bm{y})}{p(\bm{x})}$.
+
+Let's compare the advantages and drawbacks of both approaches. The discriminative approach is often more efficient in practice, since it only needs to estimate the conditional probability $p(\bm{y}|\bm{x})$, which is often much simpler than estimating the joint probability $p(\bm{x}, \bm{y})$. However, the discriminative approach does not provide any information about the distribution of the features $\bm{x}$, which can be useful in some cases. On the other hand, the generative approach provides information about the distribution of the features $\bm{x}$, but it is often more difficult to implement and less efficient in practice if one is only interested in classification purposes. Moreover, generative models are also better at fitting classes separately, which can be useful in the case of imbalanced datasets, since in the case of discriminative models, all parameters interact. 
+
+One of the most common generative classifier is Naive Bayes. This simple model assumes a factorised distribution $\displaystyle p(\bm{x}|\bm{y}) = \prod_{i=1}^d p(\bm{x}_i|\bm{y})$, which means that the features are independent given the label. This assumption is often far from being verified in practice for image datasets. For this reason, in the following, we will follow the path of \cite{main_paper} and use a latent-variable model $p(\bm{x}, \bm{y}, \bm{z})$ to design our generative classifier. 
+
+Note that this model does not assume a factorised distribution for $p(\bm{x}|\bm{y})$, since in this case $p(\bm{x}|\bm{y}) = \displaystyle\dfrac{\int p(\bm{x}, \bm{y}, \bm{z}) d\bm{z}}{\int p(\bm{x}, \bm{y}, \bm{z}) d\bm{x} d\bm{y}}$. In order to fully define a latent-variable model, we need to explicitely chose a structure for $p(\bm{x}, \bm{y}, \bm{z})$. At this point, several choices are possible:
 
 \begin{align*}
  & p(\bm{x}, \bm{y}, \bm{z}) = p_{\mathcal{D}}(\bm{x})p(\bm{z}|\bm{x})p(\bm{y}|\bm{x}, \bm{z}) \tag{DFX} \\
@@ -103,7 +114,8 @@ We also use a convolutionnal neural network similar to the one used to model $p(
 \section{Adversarial attacks}
 \label{sec:attacks}
 
-\paragraph{} In this section, we will present the different methods we used to create adversarial attacks on our models. These methods can be divided into two categories: white box attacks and black box attacks, depending on the knowledge of the attacker regarding the model. If the attacker has access to the model's parameters and architecture, we will talk about white box attacks. Otherwise, we will talk about black box attacks. \\
+\paragraph{} In this section, we will present the different methods we used to create adversarial attacks on our models. These methods can be divided into two categories: white box attacks and black box attacks, depending on the knowledge of the attacker regarding the model. If the attacker has access to the model's parameters and architecture, we will talk about white box attacks. Otherwise, we will talk about black box attacks. 
+
 In all cases, we aim to design attacks which are as imperceptible as possible to the human eye, while changing the predicted label of the model. In other words, we aim to solve the following optimization problem:
 
 \begin{equation*}
@@ -117,19 +129,21 @@ In all cases, we aim to design attacks which are as imperceptible as possible to
 
 where $\bm{\eta}$ is the adversarial perturbation, $\bm{x}$ is the original sample, and $p(\bm{y}|\bm{x})$ is the conditional probability of the label $\bm{y}$ given the sample $\bm{x}$. Note that as we are considering a multiclass classification problem, we will implement the different attacks as one-vs-all attacks, \textit{i.e.} we will create adversarial examples to change the prediction of the model for each class independently.
 
-\paragraph{} In order to compare the different algorithmic solutions to this problem, we will keep using the Fashion-MNIST dataset mentionned above, and we will compare the different approches by computing the accuracy of the model on the adversarial examples, as well as the average robustness $\rho = \displaystyle \dfrac{1}{n_{\text{samples}}} \sum \limits_{i=1}^{n_{\text{samples}}} \dfrac{\|\bm{\eta}_i \|_2}{\|\bm{x}_i\|_2}$ of the model to the adversarial perturbations.
+In order to compare the different algorithmic solutions to this problem, we will keep using the Fashion-MNIST dataset mentionned above, and we will compare the different approches by computing the accuracy of the model on the adversarial examples, as well as the average robustness $\rho = \displaystyle \dfrac{1}{n_{\text{samples}}} \sum \limits_{i=1}^{n_{\text{samples}}} \dfrac{\|\bm{\eta}_i \|_2}{\|\bm{x}_i\|_2}$ of the model to the adversarial perturbations.
 
 \subsection{White box attacks}
 
 \subsubsection{Fast Gradient Sign (FGS) method}
 
-\paragraph{} We first implemented the Fast Gradient Sign (FGS) method \cite{fast_gradient_sign}, which is a simple and efficient method to create adversarial attacks. Let us consider a model with a model loss function $J_{\theta}$ and a sample $(\bm{x}, \bm{y})$. The FGS method consists in adding a perturbation $\bm{\eta}$ to the input $\bm{x}$, with $\bm{\eta} = \varepsilon \times \text{sign}(\bm{\nabla}_{\bm{x}} J_{\theta}(\bm{x}, \bm{y}))$, where $\varepsilon$ is a hyperparameter which controls the magnitude of the perturbation. For more details, our implementation of the Fast Gradient Sign method is described in \ref{algo:fgs}. \\
+\paragraph{} We first implemented the Fast Gradient Sign (FGS) method first introduced in \cite{fast_gradient_sign} and later mentionned in \cite{robustness}, which is a simple and efficient method to create adversarial attacks. Let us consider a model with a model loss function $J_{\theta}$ and a sample $(\bm{x}, \bm{y})$. The FGS method consists in adding a perturbation $\bm{\eta}$ to the input $\bm{x}$, with $\bm{\eta} = \varepsilon \times \text{sign}(\bm{\nabla}_{\bm{x}} J_{\theta}(\bm{x}, \bm{y}))$, where $\varepsilon$ is a hyperparameter which controls the magnitude of the perturbation. For more details, our implementation of the Fast Gradient Sign method is described in \ref{algo:fgs}. 
 
 This method is very simple to implement, and cheap to run (since it only requires one gradient computation), but it comes with a practical drawback; the perturbations are often very visible to the human eye, which makes them less realistic. This comes from the fact that the $\varepsilon$ hyperparameter is often chosen to be too large, in order to ensure that the perturbation is large enough to fool the model "often enough". 
 
 \subsubsection{DeepFool method}
 
-\paragraph{} In order to create more subtle perturbations, we then implemented the DeepFool algorithm. This algorithm was first introduced in \cite{deepfool}, as a way to create small adversarial examples for deep neural networks. The idea is to iteratively compute the minimal perturbation $\bm{\eta}$ which is required to change the prediction of the model. More precisely, let us consider a model with a model loss function $J_{\theta}$ and a sample $(\bm{x}, \bm{y})$. The DeepFool algorithm consists in iteratively computing the minimal perturbation $\bm{\eta}$ which is required to change the prediction of the model, with $\bm{\eta} = \dfrac{J_{\theta}(\bm{x}, \bm{y})}{\|\bm{\nabla}_{\bm{x}} J_{\theta}(\bm{x}, \bm{y})\|_2^2} \bm{\nabla}_{\bm{x}} J_{\theta}(\bm{x}, \bm{y})$. \\
+\paragraph{} In order to create more subtle perturbations, we then implemented the DeepFool algorithm. This algorithm was first introduced in \cite{deepfool}, as a way to create small adversarial examples for deep neural networks. This algorithm has since grown in popularity, and has been used in several other papers and benchmarks, such as \cite{robustness}.
+
+The idea behind it is to iteratively compute the minimal perturbation $\bm{\eta}$ which is required to change the prediction of the model. More precisely, let us consider a model with a model loss function $J_{\theta}$ and a sample $(\bm{x}, \bm{y})$. The DeepFool algorithm consists in iteratively computing the minimal perturbation $\bm{\eta}$ which is required to change the prediction of the model, with $\bm{\eta} = \dfrac{J_{\theta}(\bm{x}, \bm{y})}{\|\bm{\nabla}_{\bm{x}} J_{\theta}(\bm{x}, \bm{y})\|_2^2} \bm{\nabla}_{\bm{x}} J_{\theta}(\bm{x}, \bm{y})$. 
 
 The idea comes from the fact that, if the model is linear, the decision boundary is a hyperplane of equation $\bm{w}^T\bm{x} + b = 0$, and the minimal perturbation required to change the prediction of the model is the orthogonal projection of the sample on the decision boundary, \textit{i.e.} $\bm{\eta} = - \dfrac{\text{sign}(\bm{w}^T\bm{x} + b)}{||\bm{w}||_2^2} \bm{w}$. In the non-linear case, the decision boundary is not a hyperplane anymore, but this heuristic still works well in practice. More precisely, our implementation of the DeepFool algorithm is described in \ref{algo:deepfool} (where we can chose another p-norm to optimise on, even if in practice we mostly focused on the case $p=2$).
 Obviously, this algorithm is more expensive to run than the FGS method (since it requires several gradient computations), but it is also more efficient since it creates smaller perturbations.
@@ -140,26 +154,14 @@ Obviously, this algorithm is more expensive to run than the FGS method (since it
 
 \subsection{Attacks detection}
 
-\paragraph{} In order to detect adversarial examples, we decided to make use of the logits of the model. More precisely, we will use the fact that the logits of the models are often quite different for adversarial examples. In order to do so, we will use the logits-based detection method introduced in \cite{main_paper}. The main idea of this method is that the logits values $(\log{p(\bm{x}, \bm{y}_c)})_{c \in C}$ of a generative classifier correspond to the log probability of generating the sample $\bm{x}$ for each label $\bm{y}_c$. \\
+\paragraph{} In order to detect adversarial examples, we decided to make use of the logits of the model. More precisely, we will use the fact that the logits of the models are often quite different for adversarial examples. In order to do so, we will use the logits-based detection method introduced in \cite{main_paper}. The main idea of this method is that the logits values $(\log{p(\bm{x}, \bm{y}_c)})_{c \in C}$ of a generative classifier correspond to the log probability of generating the sample $\bm{x}$ for each label $\bm{y}_c$. Knowing this, we aim to reject samples that correspond to underconfident predictions. 
 
-The main idea behind logit-based attacks detection is to reject inputs using the joint density $p(\bm{x}, \bm{y})$ of the generative classifier, \textit{i.e.} to reject a sample $x$ if $p(\bm{x}, F(\bm{x}))$ (where $y = F(\bm{x})$ is the label predicted by the model for the sample $\bm{x}$) is too low. As usual for probability tresholds, we use the logarithmic scale, and we reject a sample $\bm{x}$ if $\log{p(\bm{x}, F(\bm{x}))} < \delta_{\bm{y}}$. We compute the tresholds $(\delta_{\bm{y}_c})_{c \in C}$ using the well classified samples of the training set with the following formula: $\delta_{\bm{y}_c} = \mu_c + \alpha \sigma_c$, where $\mu_c$ and $\sigma_c$ are the mean and standard deviation of the log-probability of the well-classified samples of class $\bm{y}_c$ in the training set, and $\alpha$ is a hyperparameter which controls the tresholds scale.
+The main idea behind logit-based attacks detection is to reject inputs using the joint density $p(\bm{x}, \bm{y})$ of the generative classifier, \textit{i.e.} to reject a sample $\bm{x}$ if $p(\bm{x}, F(\bm{x}))$ (where $\bm{y} = F(\bm{x})$ is the label predicted by the model for the sample $\bm{x}$) is too low. As usual for probability tresholds, we use the logarithmic scale, and we reject a sample $\bm{x}$ if $\log{p(\bm{x}, F(\bm{x}))} < \delta_{\bm{y}}$. We compute the tresholds $(\delta_{\bm{y}_c})_{c \in C}$ using the well classified samples of the training set with the following formula: $\delta_{\bm{y}_c} = \mu_c + \alpha \sigma_c$, where $\mu_c$ and $\sigma_c$ are the mean and standard deviation of the log-probability of the well-classified samples of class $\bm{y}_c$ in the training set, and $\alpha$ is a hyperparameter which controls the tresholds scale.
 
 \section{Experimental setup}
 \label{sec:setup}
 
 \paragraph{} In this section, we will discuss the different experiments we ran in order to compare the robustness of the discriminative and generative classifiers to adversarial attacks. More precisely, we will first present the performances of our models, then we will compare the different attacks we used to create adversarial examples, and finally we will the results of a detection method specially designed to detect adversarial examples with generative classifiers.
-
-\subsection{Models performances}
-
-\paragraph{} 
-
-\subsection{Attacks benchmark}
-
-\paragraph{} 
-
-\subsection{Attacks detection}
-
-\paragraph{}
 
 
 \section{Results}

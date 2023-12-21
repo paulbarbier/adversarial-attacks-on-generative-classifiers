@@ -21,7 +21,7 @@ def get_config():
   # training params
   config.dtype = "float32"
   config.train_batch_size = 100 
-  config.test_batch_size = 200
+  config.test_batch_size = 100
   config.optimiser = "adam"
   config.learning_rate = 1e-4
   config.num_epochs = 50

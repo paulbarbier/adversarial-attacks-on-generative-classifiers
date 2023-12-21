@@ -11,8 +11,6 @@ def compute_logits_stats(key, train_dl, model_data):
     with tqdm(train_dl, unit="batch") as ttrain:
         ttrain.set_description(f"Prepare threshold detection")
         for train_step, (X_batch, y_batch) in enumerate(ttrain):
-            if train_step == 1:
-                break
             key, logits_batch = classifier.compute_logits(
                 key, model_config, params, log_likelihood_fn, X_batch, K
             )

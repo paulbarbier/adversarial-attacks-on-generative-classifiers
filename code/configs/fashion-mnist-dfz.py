@@ -11,8 +11,8 @@ def get_config():
 
   # params about the dataset
   config.dataset = "fashion-mnist"
-  config.n_train = 59000
-  config.n_test = 1000
+  config.n_train = 50000
+  config.n_test = 10000
   config.n_classes = 10
   config.image_width = 28
   config.image_height = 28

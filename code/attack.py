@@ -32,8 +32,8 @@ def attack(flags):
 
   classifier = get_classifier(config) 
 
-  eval_ds = get_dataset(config.dataset, train=False)
-  eval_dl = get_dataloader(eval_ds, flags.config.attack_batch_size, dtype)
+  eval_ds = get_dataset(config.dataset, train=False, dtype=dtype)
+  eval_dl = get_dataloader(eval_ds, flags.config.attack_batch_size, shuffle=False)
 
   model_config = classifier.create_model_config(config)
   log_likelihood_fn = classifier.log_likelihood_A

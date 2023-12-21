@@ -14,6 +14,7 @@ import models.ClassifierDFZ as ClassifierDFZ
 import attacks.DeepFool as DeepFool
 import attacks.DeepFoolPaper as DeepFoolPaper
 import attacks.FastGradientSign as FastGradientSign
+import attacks.DeepFoolBetter as DeepFoolBetter
 
 def plot_image(image):
     plt.imshow(image, interpolation='nearest')
@@ -61,6 +62,8 @@ def get_attack_model(config: ConfigDict):
         attack_model = DeepFool
     elif config.attack_name == "deepfoolpaper":
         attack_model = DeepFoolPaper
+    elif config.attack_name == "deepfoolbetter":
+        attack_model = DeepFoolBetter
     elif config.attack_name == "fastgradientsign":
         attack_model = FastGradientSign
     else:

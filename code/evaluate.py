@@ -80,7 +80,11 @@ def evaluate(flags):
   metrics["loss"] = jnp.mean(eval_losses)
 
   checkpointer = ocp.PyTreeCheckpointer()
-  checkpointer.save(CHECKPOINT_DIR / f"{config.checkpoint_name}-evaluation", metrics)
+
+  checkpoint_name = flags.checkpoint_name
+  if checkpoint_name == "":
+    checkpoint_name = f"{config.checkpoint_name}-evaluation"
+  checkpointer.save(CHECKPOINT_DIR / checkpoint_name, metrics)
 
   metric_keys = ["loss", "accuracy", "precision_micro", "precision_macro", "recall_micro", "recall_macro", "f1_score_micro", "f1_score_macro"]
   print("Evaluation metrics")
@@ -92,6 +96,7 @@ def evaluate(flags):
 FLAGS = flags.FLAGS
 
 flags.DEFINE_string("checkpoint", "", "Checkpoint relative path.")
+flags.DEFINE_string("checkpoint_name", "", "folder under checkpoints to save the experiment")
 flags.DEFINE_string("dtype", "", "dtype")
 flags.DEFINE_bool("debug", False, "debug flag")
 flags.DEFINE_integer("K", -1, "number of samples to use for importance sampling")

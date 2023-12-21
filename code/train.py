@@ -132,8 +132,11 @@ def train_and_evaluate(flags):
             print(", ".join(f"{key}: {metrics[key][-1]:.3f}" for key in metric_keys))
 
             if config.checkpoint:
+                checkpoint_name = flags.checkpoint_name
+                if checkpoint_name == "":
+                    checkpoint_name = f"{config.checkpoint_name}-{epoch}"
                 checkpointer.save(
-                    CHECKPOINT_DIR / f"{config.checkpoint_name}-{epoch}",
+                    CHECKPOINT_DIR / checkpoint_name,
                     {
                         "config": config.to_dict(),
                         "model_config": model_config,
@@ -151,6 +154,7 @@ config_flags.DEFINE_config_file(
     lock_config=True,
 )
 
+flags.DEFINE_string("checkpoint_name", "", "folder under checkpoints to save the experiment")
 flags.DEFINE_bool("debug", False, "debug flag")
 
 def main(argv):

@@ -94,8 +94,11 @@ def attack(flags):
   metrics["attack_success_rate"] = np.mean(metrics["attack_success_rate"])
 
   checkpointer = ocp.PyTreeCheckpointer()
+  checkpoint_name = flags.checkpoint_name
+  if checkpoint_name == "":
+    checkpoint_name = f"{config.checkpoint_name}-attack-{flags.config.checkpoint_name}"
   checkpointer.save(
-    CHECKPOINT_DIR / f"{config.checkpoint_name}-attack-{flags.config.checkpoint_name}", 
+    CHECKPOINT_DIR / checkpoint_name, 
     {
       "metrics": metrics,
       "attack_config": flags.config.to_dict(),
@@ -112,6 +115,7 @@ config_flags.DEFINE_config_file(
 )
 
 flags.DEFINE_string("checkpoint", "", "Checkpoint relative path.")
+flags.DEFINE_string("checkpoint_name", "", "folder under checkpoints to save the experiment")
 flags.DEFINE_string("dtype", "", "dtype")
 flags.DEFINE_bool("debug", False, "debug flag")
 flags.DEFINE_integer("K", -1, "number of samples to use for importance sampling")

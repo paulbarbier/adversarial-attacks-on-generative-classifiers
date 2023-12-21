@@ -5,7 +5,7 @@ def get_config():
 
   config.attack_name = "deepfool"
   config.checkpoint_name = "deepfool-1"
-  config.max_iter = 10
+  config.max_iter = 100
   config.learning_rate = 1.0
   config.p = 2
   config.attack_batch_size = 100

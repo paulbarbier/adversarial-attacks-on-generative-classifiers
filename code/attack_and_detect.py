@@ -125,8 +125,6 @@ def attack_and_detect(flags):
   metrics["true_positive_rates"] = jnp.mean(metrics["true_positive_rates"], axis=1)
   metrics["false_positive_rates"] = jnp.mean(metrics["false_positive_rates"], axis=1) 
 
-  print(metrics["true_positive_rates"])
-
   metrics["pertubation_norms"] = np.mean(metrics["pertubation_norms"])
   metrics["attack_success_rate"] = np.mean(metrics["attack_success_rate"])
 

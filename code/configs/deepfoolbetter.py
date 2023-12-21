@@ -8,6 +8,6 @@ def get_config():
   config.max_iter = 10
   config.learning_rate = 1.0
   config.p = 2
-  config.attack_batch_size = 10
+  config.attack_batch_size = 80
 
   return config

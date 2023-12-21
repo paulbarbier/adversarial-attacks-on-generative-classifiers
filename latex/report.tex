@@ -59,7 +59,7 @@ Alexandre Lutt, ENS Paris-Saclay\\
 \section{Models}
 \label{sec:models}
 
-\paragraph{}
+\paragraph{} In this section, we will present the different models we used for our experiments. More precisely, we will introduce generative models, present the two classifiers we used for our experiments as well as their respective architecture. Then, we will present the dataset that we worked with, and provide details about the training procedure of our models.
 
 \subsection{Discriminative versus generative models}
 
@@ -77,21 +77,28 @@ Alexandre Lutt, ENS Paris-Saclay\\
  & p(\bm{x}, \bm{y}, \bm{z}) = p_{\mathcal{D}}(\bm{y})p(\bm{z}|\bm{y})p(\bm{x}|\bm{z}) \tag{GBY} \\
 \end{align*}
 
-\paragraph{} In those acronyms, D stands for \textit{discriminative}, G stands for \textit{generative}, F stands for \textit{fully-connected graph} (see \ref{fig:graphical_models_architecture}), and the last letter indicates on which variable we assume a prior distribution (determined with $\mathcal{D}$ in the case of X and Y). In our case, we will focus on the DFZ and GFZ structures, in order to be able to compare the discriminative and generative approaches, but everything that we will see can easily be extended to the other structures.
-
-\begin{figure}[h]
-\begin{center}
-\includegraphics[width=0.8\linewidth]{illustrations/graphical_models_architecture.png}
-\end{center}
-\caption{Examples of latent-variable models architecture}
-\label{fig:graphical_models_architecture}
-\end{figure}
-%% TODO: add a figure with the different graph architectures
+\paragraph{} In those acronyms, D stands for \textit{discriminative}, G stands for \textit{generative}, F stands for \textit{fully-connected graph}, and the last letter indicates on which variable we assume a prior distribution (determined with $\mathcal{D}$ in the case of X and Y). In our case, we will focus on the DFZ and GFZ structures, in order to be able to compare the discriminative and generative approaches, but everything that we will see can easily be extended to the other structures.
 
 \subsection{Classifiers architecture}
 
-\paragraph{} As mentionned above, we will consider two different classifiers. The first one will be a simple discriminative classifier (with DFZ structure), while the second one will be a generative classifier (with GFZ structure).
-%% TODO: explain both architectures (add a figure?)
+\paragraph{} As mentionned above, we will consider two different classifiers. The first one will be a simple discriminative classifier (with DFZ structure), while the second one will be a generative classifier (with GFZ structure). More specifically, we will consider the following architectures (all of them include dropout during training for regularization purposes):
+
+\begin{itemize}
+    \item \textbf{Discriminative classifier:} In this case, we use two neural networks to approximate $p(\bm{x}|\bm{z})$ and $p(\bm{y}|\bm{x}, \bm{z})$ respectively. More precisely, we use a convolutionnal neural network with 3 convolutions layers with ReLU activations, followed by 3 dense layers, to approximate $p(\bm{y}|\bm{x}, \bm{z})$. On the other hand, $p(\bm{x}|\bm{z})$ is obtained after a sequence (with dropout during training) of 2 dense layers and 3 transposed convolutions. Note that we use a transposed convolution instead of a simple convolution, in order to be able to reconstruct the original image size. 
+    \item \textbf{Generative classifier:} This case differs from the previous one in the sense that we use a simple 3-layers MLP to approximate $p(\bm{y}|\bm{z})$ as well as a sequential model with 2 dense layers and 3 transposed convolutions for $p(\bm{x}|\bm{y}, \bm{z})$.
+\end{itemize}
+
+\paragraph{} Note that in both cases, we use the amortised approximate posterior $q(\bm{z}|\bm{x}, \bm{z})$ for training. More specifically, we learn both $p(\bm{x}, \bm{y}, \bm{z})$ and $q(\bm{z}|\bm{x}, \bm{z})$ by maximizing the variational lower bound as in \cite{auto_encoding_variational_bayes}:
+\[ \mathbb{E}_{\mathcal{D}}[\mathcal{L}_{VI}(\bm{x}, \bm{y})] = \frac{1}{N} \sum \limits_{i=1}^N \mathbb{E}_q \Big[ \log{\frac{p(\bm{x}_n, \bm{y}_n, \bm{z}_n)}{q(\bm{z}_n|\bm{x}_n, \bm{y}_n)}} \Big] \]
+We also use a convolutionnal neural network similar to the one used to model $p(\bm{y}|\bm{x}, \bm{z})$ to approximate $q(\bm{z}|\bm{x}, \bm{y})$.
+
+\subsection{Dataset}
+
+\paragraph{} For all of our experiments, we used the Fashion MNIST dataset, which is a dataset of 70 000 grayscale images of size $28 \times 28$ pixels, each associated to one of 10 classes. The dataset is divided into a training set of 60 000 images and a test set of 10 000 images. The reason for this choice comes from the very high accuracies obtained by \cite{main_paper} on the original MNIST dataset. In order to make the classification task more challenging, we decided to use the Fashion MNIST dataset instead, which is very similar to the original MNIST dataset, but with more complex images (fashion items \textit{versus} handwritten digits).
+
+\subsection{Training} 
+
+\paragraph{} In order to train our models, we used the Adam optimizer with a learning rate of $10^{-3}$, a batch size of 100, and we trained our models for 20 epochs on a T400 GPU. Note that we did not use any data augmentation technique, since we wanted to focus on the robustness of our models to adversarial attacks, and not on the robustness of the data augmentation techniques themselves. 
 
 \section{Adversarial attacks}
 \label{sec:attacks}
@@ -116,26 +123,33 @@ where $\bm{\eta}$ is the adversarial perturbation, $\bm{x}$ is the original samp
 
 \subsubsection{Fast Gradient Sign (FGS) method}
 
-\paragraph{} We first implemented the Fast Gradient Sign (FGS) method \cite{fast_gradient_sign}, which is a simple and efficient method to create adversarial attacks. Let us consider a model with a model loss function $J_{\theta}$ and a sample $(\bm{x}, \bm{y})$. The FGS method consists in adding a perturbation $\bm{\eta}$ to the input $\bm{x}$, with $\bm{\eta} = \varepsilon \times \text{sign}(\bm{\nabla}_{\bm{x}} J_{\theta}(\bm{x}, \bm{y}))$, where $\varepsilon$ is a hyperparameter which controls the magnitude of the perturbation. For more details, our implementation of the Fast Gradient Sign method is described in \ref{algo:fgs}. This method is very simple to implement, and cheap to run (since it only requires one gradient computation), but it comes with a practical drawback; the perturbations are often very visible to the human eye, which makes them less realistic. This comes from the fact that the $\varepsilon$ hyperparameter is often chosen to be too large, in order to ensure that the perturbation is large enough to fool the model. 
+\paragraph{} We first implemented the Fast Gradient Sign (FGS) method \cite{fast_gradient_sign}, which is a simple and efficient method to create adversarial attacks. Let us consider a model with a model loss function $J_{\theta}$ and a sample $(\bm{x}, \bm{y})$. The FGS method consists in adding a perturbation $\bm{\eta}$ to the input $\bm{x}$, with $\bm{\eta} = \varepsilon \times \text{sign}(\bm{\nabla}_{\bm{x}} J_{\theta}(\bm{x}, \bm{y}))$, where $\varepsilon$ is a hyperparameter which controls the magnitude of the perturbation. For more details, our implementation of the Fast Gradient Sign method is described in \ref{algo:fgs}. \\
+
+This method is very simple to implement, and cheap to run (since it only requires one gradient computation), but it comes with a practical drawback; the perturbations are often very visible to the human eye, which makes them less realistic. This comes from the fact that the $\varepsilon$ hyperparameter is often chosen to be too large, in order to ensure that the perturbation is large enough to fool the model "often enough". 
 
 \subsubsection{DeepFool method}
 
-\paragraph{} In order to create more subtle perturbations, we then implemented the DeepFool algorithm. This algorithm was first introduced in \cite{deepfool}, as a way to create small adversarial examples for deep neural networks. The idea is to iteratively compute the minimal perturbation $\bm{\eta}$ which is required to change the prediction of the model. More precisely, let us consider a model with a model loss function $J_{\theta}$ and a sample $(\bm{x}, \bm{y})$. The DeepFool algorithm consists in iteratively computing the minimal perturbation $\bm{\eta}$ which is required to change the prediction of the model, with $\bm{\eta} = \dfrac{J_{\theta}(\bm{x}, \bm{y})}{\|\bm{\nabla}_{\bm{x}} J_{\theta}(\bm{x}, \bm{y})\|_2^2} \bm{\nabla}_{\bm{x}} J_{\theta}(\bm{x}, \bm{y})$. The idea comes from the fact that, if the model is linear, the decision boundary is a hyperplane of equation $\bm{w}^T\bm{x} + b = 0$, and the minimal perturbation required to change the prediction of the model is the orthogonal projection of the sample on the decision boundary, \textit{i.e.} $\bm{\eta} = - \dfrac{\text{sign}(\bm{w}^T\bm{x} + b)}{||\bm{w}||_2^2} \bm{w}$. In the non-linear case, the decision boundary is not a hyperplane anymore, but this heuristic still works well in practice. More precisely, our implementation of the DeepFool algorithm is described in \ref{algo:deepfool} (where we can chose another p-norm to optimise on, even if in practice we mostly focused on the case $p=2$).
+\paragraph{} In order to create more subtle perturbations, we then implemented the DeepFool algorithm. This algorithm was first introduced in \cite{deepfool}, as a way to create small adversarial examples for deep neural networks. The idea is to iteratively compute the minimal perturbation $\bm{\eta}$ which is required to change the prediction of the model. More precisely, let us consider a model with a model loss function $J_{\theta}$ and a sample $(\bm{x}, \bm{y})$. The DeepFool algorithm consists in iteratively computing the minimal perturbation $\bm{\eta}$ which is required to change the prediction of the model, with $\bm{\eta} = \dfrac{J_{\theta}(\bm{x}, \bm{y})}{\|\bm{\nabla}_{\bm{x}} J_{\theta}(\bm{x}, \bm{y})\|_2^2} \bm{\nabla}_{\bm{x}} J_{\theta}(\bm{x}, \bm{y})$. \\
+
+The idea comes from the fact that, if the model is linear, the decision boundary is a hyperplane of equation $\bm{w}^T\bm{x} + b = 0$, and the minimal perturbation required to change the prediction of the model is the orthogonal projection of the sample on the decision boundary, \textit{i.e.} $\bm{\eta} = - \dfrac{\text{sign}(\bm{w}^T\bm{x} + b)}{||\bm{w}||_2^2} \bm{w}$. In the non-linear case, the decision boundary is not a hyperplane anymore, but this heuristic still works well in practice. More precisely, our implementation of the DeepFool algorithm is described in \ref{algo:deepfool} (where we can chose another p-norm to optimise on, even if in practice we mostly focused on the case $p=2$).
 Obviously, this algorithm is more expensive to run than the FGS method (since it requires several gradient computations), but it is also more efficient since it creates smaller perturbations.
 
 \subsection{Black box attacks}
 
 \paragraph{} 
 
+\subsection{Attacks detection}
+
+\paragraph{} In order to detect adversarial examples, we decided to make use of the logits of the model. More precisely, we will use the fact that the logits of the models are often quite different for adversarial examples. In order to do so, we will use the logits-based detection method introduced in \cite{main_paper}. The main idea of this method is that the logits values $(\log{p(\bm{x}, \bm{y}_c)})_{c \in C}$ of a generative classifier correspond to the log probability of generating the sample $\bm{x}$ for each label $\bm{y}_c$. \\
+
+The main idea behind logit-based attacks detection is to reject inputs using the joint density $p(\bm{x}, \bm{y})$ of the generative classifier, \textit{i.e.} to reject a sample $x$ if $p(\bm{x}, F(\bm{x}))$ (where $y = F(\bm{x})$ is the label predicted by the model for the sample $\bm{x}$) is too low. As usual for probability tresholds, we use the logarithmic scale, and we reject a sample $\bm{x}$ if $\log{p(\bm{x}, F(\bm{x}))} < \delta_{\bm{y}}$. We compute the tresholds $(\delta_{\bm{y}_c})_{c \in C}$ using the well classified samples of the training set with the following formula: $\delta_{\bm{y}_c} = \mu_c + \alpha \sigma_c$, where $\mu_c$ and $\sigma_c$ are the mean and standard deviation of the log-probability of the well-classified samples of class $\bm{y}_c$ in the training set, and $\alpha$ is a hyperparameter which controls the tresholds scale.
 
 \section{Experimental setup}
 \label{sec:setup}
 
-\subsection{Attacks detection}
+\paragraph{} In this section, we will discuss the different experiments we ran in order to compare the robustness of the discriminative and generative classifiers to adversarial attacks. More precisely, we will first present the performances of our models, then we will compare the different attacks we used to create adversarial examples, and finally we will the results of a detection method specially designed to detect adversarial examples with generative classifiers.
 
-\paragraph{} 
-
-\subsection{Models training}
+\subsection{Models performances}
 
 \paragraph{} 
 
@@ -177,11 +191,7 @@ Obviously, this algorithm is more expensive to run than the FGS method (since it
 \SetAlgoLined
 \KwInput{$f_{\theta}$, $\bm{x}$, $\bm{y}$, $\varepsilon$}
 \KwOutput{$\bm{\eta}$}
-\For{$k \neq y$}{
-     $\bm{g}_k \leftarrow \bm{\nabla}_{\bm{x}} J_{\theta}(\bm{x}, k)$ \\
-     $\bm{\eta}_k \leftarrow \varepsilon \times \text{sign}(\bm{g}_k)$ \\
-}
-$\bm{\eta} \leftarrow \underset{k, f_{\theta}(\bm{x} + \eta_k) \neq y}{\text{argmin }} \|\bm{\eta}_k\|_2$ \\
+$\bm{\eta} \leftarrow \varepsilon \times \text{sign}(\bm{\nabla}_{\bm{x}} J_{\theta}(\bm{x}))$ \\
 \caption{Fast Gradient Sign method}
 \label{algo:fgs}
 \end{algorithm}

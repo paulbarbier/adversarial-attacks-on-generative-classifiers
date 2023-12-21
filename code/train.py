@@ -102,7 +102,7 @@ def train_and_evaluate(flags):
 
                     # compute batch prediction
                     test_key, y_pred_batch = classifier.make_predictions(
-                        test_key, model_config, training_state.params, X_batch, log_likelihood_fn
+                        test_key, model_config, training_state.params, log_likelihood_fn, X_batch,
                     )
                     y_predictions.append(y_pred_batch)
                     y_true.append(y_batch)

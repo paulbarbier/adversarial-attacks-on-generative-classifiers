@@ -1,14 +1,14 @@
 # Fdb version 4
-["bibtex report"] 1703170513 "report.aux" "report.bbl" "report" 1703173137 0
-  "./biblio.bib" 1703101483 1506 e24bf5e0da2e5fd5eb8ea4878ec5808d ""
+["bibtex report"] 1703266893 "report.aux" "report.bbl" "report" 1703266893 2
+  "./biblio.bib" 1703266663 2128 73cc6cb2d137011819cdd89759192904 ""
   "/usr/local/texlive/2023/texmf-dist/bibtex/bst/base/acm.bst" 1292289607 21064 c61a48664f3c347ce7f73c1a6a530506 ""
-  "report.aux" 1703173136 7930 dceac9b86588184a49b5c2961cd120a7 "pdflatex"
+  "report.aux" 1703266892 12627 7881f6dfa4c11d2ed4b8e48e97db455e "pdflatex"
   (generated)
   "report.bbl"
   "report.blg"
   (rewritten before read)
-["pdflatex"] 1703173136 "/Users/alexandrelutt/Desktop/Travail/ENPC/3A/MVA/Probabilistic Graphical Models/adversarial-attacks-on-generative-classifiers/latex/report.tex" "report.pdf" "report" 1703173137 0
-  "/Users/alexandrelutt/Desktop/Travail/ENPC/3A/MVA/Probabilistic Graphical Models/adversarial-attacks-on-generative-classifiers/latex/report.tex" 1703173135 19626 28fc287f07e195750fff7b886f01607f ""
+["pdflatex"] 1703266891 "/Users/alexandrelutt/Desktop/Travail/ENPC/3A/MVA/Probabilistic Graphical Models/adversarial-attacks-on-generative-classifiers/latex/report.tex" "report.pdf" "report" 1703266893 0
+  "/Users/alexandrelutt/Desktop/Travail/ENPC/3A/MVA/Probabilistic Graphical Models/adversarial-attacks-on-generative-classifiers/latex/report.tex" 1703266868 33059 c741f63ee1397fefb642cfd809515162 ""
   "/usr/local/texlive/2023/texmf-dist/fonts/enc/dvips/base/8r.enc" 1165713224 4850 80dc9bab7f31fb78a000ccfed0e27cab ""
   "/usr/local/texlive/2023/texmf-dist/fonts/map/fontname/texfonts.map" 1577235249 3524 cb3e574dea2d1052e39280babc910dc8 ""
   "/usr/local/texlive/2023/texmf-dist/fonts/tfm/adobe/courier/pcrr7t.tfm" 1136768653 960 379cc0019370a9e0208a0a3f949f847a ""
@@ -63,6 +63,7 @@
   "/usr/local/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi8.pfb" 1248133631 35469 70d41d2b9ea31d5d813066df7c99281c ""
   "/usr/local/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/cm/cmmib10.pfb" 1248133631 36912 b448ef9ad9d7228ec3c6e71005136d55 ""
   "/usr/local/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb" 1248133631 35752 024fb6c41858982481f6968b5fc26508 ""
+  "/usr/local/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/cm/cmr6.pfb" 1248133631 32734 69e00a6b65cedb993666e42eedb3d48f ""
   "/usr/local/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/cm/cmr8.pfb" 1248133631 32726 0a1aea6fcd6468ee2cf64d891f5c43c8 ""
   "/usr/local/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb" 1248133631 32569 5e5ddc8df908dea60932f3c484a54c0d ""
   "/usr/local/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy8.pfb" 1248133631 32626 4f5c1b83753b1dd3a97d1b399a005b4b ""
@@ -172,6 +173,7 @@
   "/usr/local/texlive/2023/texmf-dist/tex/latex/latexconfig/epstopdf-sys.cfg" 1279039959 678 4792914a8f45be57bb98413425e4c7af ""
   "/usr/local/texlive/2023/texmf-dist/tex/latex/letltxmacro/letltxmacro.sty" 1575499565 5766 13a9e8766c47f30327caf893ece86ac8 ""
   "/usr/local/texlive/2023/texmf-dist/tex/latex/mfirstuc/mfirstuc.sty" 1666126495 18649 0158a8d684645a30f5c01e471f44e851 ""
+  "/usr/local/texlive/2023/texmf-dist/tex/latex/multirow/multirow.sty" 1615845910 6149 2398eec4faa1ee24ff761581e580ecf1 ""
   "/usr/local/texlive/2023/texmf-dist/tex/latex/psnfss/ot1pcr.fd" 1137110629 985 1ed784d7bfe47179f3550d2303b073f8 ""
   "/usr/local/texlive/2023/texmf-dist/tex/latex/psnfss/ot1ptm.fd" 1137110629 961 15056f4a61917ceed3a44e4ac11fcc52 ""
   "/usr/local/texlive/2023/texmf-dist/tex/latex/psnfss/times.sty" 1586716065 856 8e0e5c8cca7b18e0400f97f5a2b90a99 ""
@@ -196,11 +198,17 @@
   "/usr/local/texlive/2023/texmf-var/web2c/pdftex/pdflatex.fmt" 1698146920 7883455 a9b1852fc68711b63feaf31fb0680e4f ""
   "/usr/local/texlive/2023/texmf.cnf" 1678822455 577 1b2b1af17af2508fb20dd85783af4050 ""
   "cvpr.sty" 1703101483 22663 ae69ac60d981219f288927532f3b519c ""
-  "report.aux" 1703173136 7930 dceac9b86588184a49b5c2961cd120a7 "pdflatex"
-  "report.bbl" 1703170513 731 3d15ad811d92b0f123cc3b24389db802 "bibtex report"
-  "report.brf" 1703173136 509 1c19fcbf751961ffa33f28e286c3dec0 "pdflatex"
-  "report.out" 1703173136 3218 a5313f585fdc63a1350cdadfa50adada "pdflatex"
-  "report.tex" 1703173135 19626 28fc287f07e195750fff7b886f01607f ""
+  "illustrations/ROC_DeepFool_dfz.png" 1703266663 25116 cd863a04279384c494a554d77c53d356 ""
+  "illustrations/ROC_DeepFool_gfz.png" 1703266663 26124 7f10b1a4291d8d9702be19ac17663574 ""
+  "illustrations/ROC_Fast Gradient Sign_dfz.png" 1703266663 24919 bbdcd4ee1a799651aeaf77511ca6ec6c ""
+  "illustrations/ROC_Fast Gradient Sign_gfz.png" 1703266663 20748 3af73f0932b92d21362a6cbddc8d7f1a ""
+  "illustrations/attacks_sample_dfz.png" 1703266663 38387 b4c8400ff7a2801aedc40541e7d76804 ""
+  "illustrations/attacks_sample_gfz.png" 1703266663 40146 95627e7e2edfd0385fd34bd88b32a3a6 ""
+  "report.aux" 1703266892 12627 7881f6dfa4c11d2ed4b8e48e97db455e "pdflatex"
+  "report.bbl" 1703266893 1066 a897bd262803fff72b56605d59db14c6 "bibtex report"
+  "report.brf" 1703266892 749 ced03a925bf98fbde69548e01baef0dc "pdflatex"
+  "report.out" 1703266892 3369 057cfe78d060120e4489a5573ca4394d "pdflatex"
+  "report.tex" 1703266868 33059 c741f63ee1397fefb642cfd809515162 ""
   (generated)
   "report.aux"
   "report.brf"

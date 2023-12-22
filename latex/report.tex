@@ -16,6 +16,7 @@
 \usepackage[linesnumbered,lined,boxed,ruled,commentsnumbered]{algorithm2e}
 \usepackage{algorithmic}
 \usepackage{textcomp}
+\usepackage{multirow}
 \usepackage{amsfonts}
 \usepackage[acronym]{glossaries}
 \usepackage[pagebackref,breaklinks,colorlinks]{hyperref}
@@ -109,7 +110,7 @@ We also use a convolutionnal neural network similar to the one used to model $p(
 
 \subsection{Training} 
 
-\paragraph{} In order to train our models, we used the Adam optimizer with a learning rate of $10^{-3}$, a batch size of 100, and we trained our models for 20 epochs on a T400 GPU. Note that we did not use any data augmentation technique, since we wanted to focus on the robustness of our models to adversarial attacks, and not on the robustness of the data augmentation techniques themselves. 
+\paragraph{} In order to train our models, we used the Adam optimizer with a learning rate of $10^{-3}$, a batch size of 100, and we trained our models for 50 epochs on a NVIDIA V100 GPU with 16GB of RAM. Note that we did not use any data augmentation technique, since we wanted to focus on the robustness of our models to adversarial attacks, and not on the robustness of the data augmentation techniques themselves. 
 
 \section{Adversarial attacks}
 \label{sec:attacks}
@@ -119,8 +120,9 @@ We also use a convolutionnal neural network similar to the one used to model $p(
 In all cases, we aim to design attacks which are as imperceptible as possible to the human eye, while changing the predicted label of the model. In other words, we aim to solve the following optimization problem:
 
 \begin{equation*}
+\tag{Adversarial Attack Problem}
 \begin{aligned}
-& \underset{\bm{\eta}}{\text{min}}
+& \underset{\bm{\eta}}{\text{min}} 
 & & \|\bm{\eta}\|_2 \\
 & \text{s.t.} 
 & & \underset{\bm{y} \in \mathcal{Y}}{\text{argmax }}(p(\bm{y}|\bm{x} + \bm{\eta})) \neq \underset{\bm{y} \in \mathcal{Y}}{\text{argmax }}p(\bm{y}|\bm{x}) \\
@@ -130,13 +132,15 @@ In all cases, we aim to design attacks which are as imperceptible as possible to
 
 where $\bm{\eta}$ is the adversarial perturbation, $\bm{x}$ is the original sample, and $p(\bm{y}|\bm{x})$ is the conditional probability of the label $\bm{y}$ given the sample $\bm{x}$. Note that as we are considering a multiclass classification problem, we will implement the different attacks as one-vs-all attacks, \textit{i.e.} we will create adversarial examples to change the prediction of the model for each class independently.
 
+It is important to note that in order to generate our attacks, we will sample new values for the latent variable $\bm{z}$, and then use the generative model with those values. This is a crucial step, since it we cannot assume that the attackers has accces to the random-number generator of the model.
+
 In order to compare the different algorithmic solutions to this problem, we will keep using the Fashion-MNIST dataset mentionned above, and we will compare the different approches by computing the accuracy of the model on the adversarial examples, as well as the average robustness $\rho = \displaystyle \dfrac{1}{n_{\text{samples}}} \sum \limits_{i=1}^{n_{\text{samples}}} \dfrac{\|\bm{\eta}_i \|_2}{\|\bm{x}_i\|_2}$ of the model to the adversarial perturbations.
 
 \subsection{White box attacks}
 
 \subsubsection{Fast Gradient Sign (FGS) method}
 
-\paragraph{} We first implemented the Fast Gradient Sign (FGS) method first introduced in \cite{fast_gradient_sign} and later mentionned in \cite{robustness}, which is a simple and efficient method to create adversarial attacks. Let us consider a model with a model loss function $J_{\theta}$ and a sample $(\bm{x}, \bm{y})$. The FGS method consists in adding a perturbation $\bm{\eta}$ to the input $\bm{x}$, with $\bm{\eta} = \varepsilon \times \text{sign}(\bm{\nabla}_{\bm{x}} J_{\theta}(\bm{x}, \bm{y}))$, where $\varepsilon$ is a hyperparameter which controls the magnitude of the perturbation. For more details, our implementation of the Fast Gradient Sign method is described in \ref{algo:fgs}. 
+\paragraph{} We first implemented the Fast Gradient Sign (FGS) method first introduced in \cite{fast_gradient_sign} and later mentionned in \cite{robustness}, which is a simple and efficient method to create adversarial attacks. Let us consider a model with a model loss function $J_{\theta}$ and a sample $(\bm{x}, \bm{y})$. The FGS method consists in adding a perturbation $\bm{\eta}$ to the input $\bm{x}$, with $\bm{\eta} = \varepsilon \times \text{sign}(\bm{\nabla}_{\bm{x}} J_{\theta}(\bm{x}))$, where $\varepsilon$ is a hyperparameter which controls the magnitude of the perturbation. 
 
 This method is very simple to implement, and cheap to run (since it only requires one gradient computation), but it comes with a practical drawback; the perturbations are often very visible to the human eye, which makes them less realistic. This comes from the fact that the $\varepsilon$ hyperparameter is often chosen to be too large, in order to ensure that the perturbation is large enough to fool the model "often enough". 
 
@@ -191,49 +195,52 @@ As untargeted attacks are easier to evaluate the general robustness of the model
 
 \paragraph{} In order to detect adversarial examples, we decided to make use of the logits of the model. More precisely, we will use the fact that the logits of the models are often quite different for adversarial examples. In order to do so, we will use the logits-based detection method introduced in \cite{main_paper}. The main idea of this method is that the logits values $(\log{p(\bm{x}, \bm{y}_c)})_{c \in C}$ of a generative classifier correspond to the log probability of generating the sample $\bm{x}$ for each label $\bm{y}_c$. Knowing this, we aim to reject samples that correspond to underconfident predictions. 
 
-The main idea behind logit-based attacks detection is to reject inputs using the joint density $p(\bm{x}, \bm{y})$ of the generative classifier, \textit{i.e.} to reject a sample $\bm{x}$ if $p(\bm{x}, F(\bm{x}))$ (where $\bm{y} = F(\bm{x})$ is the label predicted by the model for the sample $\bm{x}$) is too low. As usual for probability tresholds, we use the logarithmic scale, and we reject a sample $\bm{x}$ if $\log{p(\bm{x}, F(\bm{x}))} < \delta_{\bm{y}}$. We compute the tresholds $(\delta_{\bm{y}_c})_{c \in C}$ using the well classified samples of the training set with the following formula: $\delta_{\bm{y}_c} = \mu_c + \alpha \sigma_c$, where $\mu_c$ and $\sigma_c$ are the mean and standard deviation of the log-probability of the well-classified samples of class $\bm{y}_c$ in the training set, and $\alpha$ is a hyperparameter which controls the tresholds scale.
+The main idea behind logit-based attacks detection is to reject inputs using the joint density $p(\bm{x}, \bm{y})$ of the generative classifier, \textit{i.e.} to reject a sample $\bm{x}$ if $p(\bm{x}, F(\bm{x}))$ (where $\bm{y} = F(\bm{x})$ is the label predicted by the model for the sample $\bm{x}$) is too low. As usual for probability tresholds, we use the logarithmic scale, and we reject a sample $\bm{x}$ if $\log{p(\bm{x}, F(\bm{x}))} < \delta_{\bm{y}}$. We compute the tresholds $(\delta_{\bm{y}_c})_{c \in C}$ using the well-classified samples of the training set with the following formula: $\delta_{\bm{y}_c} = \mu_c + \alpha \sigma_c$, where $\mu_c$ and $\sigma_c$ are the mean and standard deviation of the log-probability of the samples of class $\bm{y}_c$ in the test set, and $\alpha$ is a hyperparameter which controls the tresholds scale.
+
+In order to find the value of the hyperparameter $\alpha$, we used the following procedure inspired from \cite{main_paper}: for different values of $\alpha$, we computed the detection and false positives rates. We then chose the value of $\alpha$ which corresponded to the highest detection rate for a false positive rate of 5\%.
 
 \section{Experimental setup}
 \label{sec:setup}
 
-\paragraph{} In this section, we will discuss the different experiments we ran in order to compare the robustness of the discriminative and generative classifiers to adversarial attacks. More precisely, we will first present the performances of our models, then we will compare the different attacks we used to create adversarial examples, and finally we will the results of a detection method specially designed to detect adversarial examples with generative classifiers.
-
+\paragraph{} In this section, we will discuss the different experiments we ran in order to compare the robustness of the discriminative and generative classifiers to adversarial attacks. More precisely, we will first present the performances of our models on the multiclass classification task, then we will compare the different attacks we used to create adversarial examples, and finally we will the results of the logit-based detection method, which has been specially designed to detect adversarial examples with generative classifiers. 
 
 \section{Results}
 \label{sec:results}
 
-\subsection{Accuracy}
+\subsection{Classification performances}
 
-\paragraph{} 
+\paragraph{} In terms of classification performances, we obtained the results displayed in \cref{tab:classification_performances} on the test and validation sets. Given the multiclass and balanced context of the task, we only focused on the accuracy. As we can see, the discriminative classifier is more efficient than the generative classifier, which is not surprising since the discriminative classifier is specifically designed for classification purposes, while the generative classifier is not. However, the generative classifier is still able to achieve a decent accuracy, which is a good sign regarding its robustness to adversarial attacks.
+
+\subsection{Runtimes of adversarial attacks}
+
+\paragraph{} In terms of runtimes, we obtained the results displayed in \cref{tab:runtimes}. As expected, we observe that the FGS algorithm is the fastest method, which is not surprising since it only requires one gradient computation. On the other hand, the ZOO method is the slowest method, which is also not a surprise. The sweet spot in terms of efficiency seems to be the DeepFool algorithm and its variant, which both take a reasonable amount of time to compute perturbations. For this reason, we will focus on comparing the Fast Gradient sign and the DeepFool algorithms in the rest of this benchmark.
 
 \subsection{Robustness to perturbations}
 
-\paragraph{} 
+\paragraph{} Before fully restricting our attention to the Fast Gradient Sign and DeepFool algorithms, we first compared the effect of each attack strategy on both models (DFZ and GFZ) on a few samples of the test set. The results are displayed in \cref{fig:attacks_sample_dfz} and \cref{fig:attacks_sample_gfz}. In this example, we can truely see the difference between the two models; the generative classifier is more robust to adversarial attacks than the discriminative one, in the sense that it requires larger perturbations to change its predictions. We also understand the different scales of the perturbations introduced by the FGS, DeepFool, Truncated-DeepFool, Wagner-Carlini and ZOO methods.
+
+Then, we computed the attack success rate as well as the robustness of our two models (DFZ and GFZ) on the entire test set using the two different attack strategies mentionned above. The results are displayed in \cref{tab:success_rates} and in \cref{tab:perturbation_norms}. As we can see, the generative classifier is more robust to adversarial attacks than the discriminative one, which is what we expected to observe. Moreover, we also see that the DeepFool algorithm is more efficient than the Fast Gradient Sign algorithm, in that it creates smaller perturbations.
 
 \subsection{Attacks detection}
 
-\paragraph{} 
+\paragraph{} Finally, we compared the detection rates of the generative classifier and the detection rates of the discriminative classifier. To obtain these results, we fixed a false-positive rate of 5\% and selected the value of $\alpha$ that ensured this false-positive rate. The results are displayed in \cref{tab:detection_rates}. As we can see, most of the FGS attacks are detected by both classifiers, which is a good sign. However, we still observe a performance gap between GFZ and DFZ, which confirms that the generative classifier is more robust to adversarial attacks than the discriminative one. Regarding the DeepFool attacks, those are much harder to detect, but we still observe a performance gap between GFZ and DFZ, which confirms our hypothesis.
+
+By selecting a wider range for the values of $\alpha$, we obtainted the ROC curves of each attack on each model, displayed in \cref{fig:roc_fgs_dfz}, \cref{fig:roc_fgs_gfz}, \cref{fig:roc_deepfool_dfz} and \cref{fig:roc_deepfool_gfz}. Those curves offers a more detailed view of the detection rates of each model, and still confirm our claims. In particular, we see that the area under the curve is larger for the generative classifier than for the discriminative one, for both attack strategies.
 
 
 \section{Conclusion}
 \label{sec:conclusion}
 
+\paragraph{} In this report, we studied the robustness of generative classifiers to adversarial attacks, compared to discriminative classifiers. More precisely, we implemented two different classifiers (one discriminative and one generative), trained them to classify images of the FashionMNIST dataset, and then compared their robustness to several adversarial attacks. In particular, we studied the Fast Gradient Sign, DeepFool, Wagner-Carlini and ZOO methods. We also proposed a slightly-modified version of the DeepFool algorithm, which we called the \textit{Truncated-DeepFool}, and which was able to create smaller perturbations than the original DeepFool algorithm.
+
+After comparing the different attacks performances, we computed the robustness of our models to adversarial attacks, and we observed that the robustness of generative classifiers was in fact double; they were more robust to adversarial attacks (in the sense that they required larger attacks to be fooled, and that also translates to larger runtimes for a given algorithm), and they were also able to detect adversarial examples more efficiently.
+
+To conclude, we can say that our experiments lead us to believe that generative classifiers are more robust to adversarial attacks than discriminative classifiers, which is a sign of improvement regarding their use in safety-critical applications. However, we also observed that the generative classifiers were less efficient in terms of classification performances, which is a drawback. With our experiments, we showed the existence of a treshold in terms of robustness and classification performances, at least in the field of Computer Vision. Discriminative classifiers seem to offer better classification performances, but it comes at the cost of a lower robustness to adversarial attacks. On the other hand, generative classifiers are more robust to adversarial attacks, but they have usually have lower classification performances. 
+
+Finally, all of our code is available on \href{https://github.com/paulbarbier/adversarial-attacks-on-generative-classifiers}{GitHub}, and aims to be easily reusable in an open-source context.
 
 \section{Appendix}
 \label{sec:appendix}
-
-\subsection{Fast Gradient Sign algorithm}
-
-\begin{algorithm}
-\SetAlgoLined
-\KwInput{$f_{\theta}$, $\bm{x}$, $\bm{y}$, $\varepsilon$}
-\KwOutput{$\bm{\eta}$}
-$\bm{\eta} \leftarrow \varepsilon \times \text{sign}(\bm{\nabla}_{\bm{x}} J_{\theta}(\bm{x}))$ \\
-\caption{Fast Gradient Sign method}
-\label{algo:fgs}
-\end{algorithm}
-
-\subsection{DeepFool algorithm}
 
 \begin{algorithm}
     \SetAlgoLined
@@ -242,20 +249,140 @@ $\bm{\eta} \leftarrow \varepsilon \times \text{sign}(\bm{\nabla}_{\bm{x}} J_{\th
     $i \leftarrow 0$ \\
     $\bm{\eta} \leftarrow 0$ \\
     $\bm{x}_0 \leftarrow \bm{x}$ \\
-    \While{$f_{\theta}(\bm{x}_i) = y$}{
+    \While{$\underset{k}{\text{argmax }} f_k(x) = y$}{
         $i \leftarrow i + 1$ \\
         \For{$k \neq y$}{
-            $\bm{w}_k \leftarrow \bm{\nabla}_{\bm{x}} J_{\theta}(\bm{x}_i, k) - \bm{\nabla}_{\bm{x}} J_{\theta}(\bm{x}_i, y)$ \\
-            $f_k \leftarrow J_{\theta}(\bm{x}_i, k) - J_{\theta}(\bm{x}_i, y)$ \\
+            $\bm{w}_k \leftarrow \bm{\nabla}_{\bm{x}} f_k(\bm{x}_i) - \bm{\nabla}_{\bm{x}} f_y(\bm{x}_i)$ \\
+            $\delta_k \leftarrow f_k(\bm{x}_i) - f_y(\bm{x}_i)$ \\
         }
-        $l \leftarrow \underset{k \neq y}{\text{argmin }} \frac{|f_k|}{||\bm{w}_k||_q}$ \\
-        $\bm{\eta}_i \leftarrow \frac{|f_l|}{||\bm{w}_l||_q^q} |\bm{w}_l|^{q-1} \times \text{sign}(\bm{w}_l)$ \\
+        $l \leftarrow \underset{k \neq y}{\text{argmin }} \frac{|\delta_k|}{||\bm{w}_k||_q}$ \\
+        $\bm{\eta}_i \leftarrow \frac{|\delta_l|}{||\bm{w}_l||_q^q} |\bm{w}_l|^{q-1} \times \text{sign}(\bm{w}_l)$ \\
         $\bm{x}_{i+1} \leftarrow \bm{x}_i + \bm{\eta}_i$ \\
         $\bm{\eta} \leftarrow \bm{\eta} + \bm{\eta}_i$ \\
     }
     \caption{DeepFool algorithm}
     \label{algo:deepfool}
 \end{algorithm}
+
+\begin{table*}[ht]
+    \centering
+    \begin{tabular}{|c|c|c|}
+        \hline
+        \textbf{Classifier} & \textbf{Accuracy (test set)} & \textbf{Accuracy (validation set)} \\
+        \hline
+        DFZ & $0.8891$ & $0.8850$ \\
+        \hline
+        GFZ & $0.8081$ & $0.7960$ \\
+        \hline
+    \end{tabular}
+    \caption{Comparison of classification performances (on test and validation set) of our classifiers}
+    \label{tab:classification_performances}
+\end{table*}
+
+
+\begin{table*}[ht]
+    \centering
+    \begin{tabular}{|c|c|c|c|c|c|}
+        \hline
+        \textbf{Classifier/Attack} & \textbf{Fast Gradient Sign} & \textbf{DeepFool} & \textbf{Truncated-DeepFool} & \textbf{Wagner Carlini} & \textbf{ZOO} \\
+        \hline
+        DFZ & $0.3$s & $1.7$s & $3.2$s & $26.3$s & $22.0$s \\
+        \hline
+        GFZ & $1.5$s & $4.2$s & $3.7$s & $24.2$s & $23.5$s \\
+        \hline
+    \end{tabular}
+    \caption{Comparison of runtimes for different attacks on our classifiers}
+    \label{tab:runtimes}
+\end{table*}
+
+\begin{table*}[ht]
+    \centering
+    \begin{tabular}{|c|c|c|}
+        \hline
+        \textbf{Classifier/Attack} & \textbf{DeepFool} & \textbf{Fast Gradient Sign} \\
+        \hline
+        DFZ & $0.4927$ & $0.2140$ \\
+        \hline
+        GFZ & $0.5560$ & $0.3734$ \\
+        \hline
+    \end{tabular}
+    \caption{Comparison of success rates for different attacks on our classifiers}
+    \label{tab:success_rates}
+\end{table*}
+
+\begin{table*}[ht]
+    \centering
+    \begin{tabular}{|c|c|c|}
+        \hline
+        \textbf{Classifier/Attack} & \textbf{DeepFool} & \textbf{Fast Gradient Sign} \\
+        \hline
+        DFZ & $0.1159$ & $0.4615$ \\
+        \hline
+        GFZ & $0.1477$ & $0.6138$ \\
+        \hline
+    \end{tabular}
+    \caption{Comparison of robustness for different attacks on our classifiers}
+    \label{tab:perturbation_norms}
+\end{table*}
+
+\begin{table*}[ht]
+    \centering
+    \begin{tabular}{|c|c|c|}
+        \hline
+        \textbf{Classifier/Attack} & \textbf{DeepFool} & \textbf{Fast Gradient Sign} \\
+        \hline
+        DFZ & $0.0875$ & $0.6843$ \\
+        \hline
+        GFZ & $0.0949$ & $0.9947$ \\
+        \hline
+    \end{tabular}
+    \caption{Comparison of detection rates for different attacks on our classifiers}
+    \label{tab:detection_rates}
+\end{table*}
+
+\begin{figure*}[ht]
+    \centering
+    \includegraphics[width=\textwidth]{illustrations/attacks_sample_dfz.png}
+    \caption{Comparison of different attacks on DFZ classifier}
+    \label{fig:attacks_sample_dfz}
+\end{figure*}
+
+\begin{figure*}[ht]
+    \centering
+    \includegraphics[width=\textwidth]{illustrations/attacks_sample_gfz.png}
+    \caption{Comparison of different attacks on GFZ classifier}
+    \label{fig:attacks_sample_gfz}
+\end{figure*}
+
+\begin{figure*}[ht]
+    \centering
+    \begin{minipage}[b]{0.49\textwidth}
+        \includegraphics[width=\textwidth]{illustrations/ROC_Fast Gradient Sign_dfz.png}
+        \caption{ROC curve for Fast Gradient Sign attack on DFZ}
+        \label{fig:roc_fgs_dfz}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[b]{0.49\textwidth}
+        \includegraphics[width=\textwidth]{illustrations/ROC_Fast Gradient Sign_gfz.png}
+        \caption{ROC curve for Fast Gradient Sign attack on GFZ}
+        \label{fig:roc_fgs_gfz}
+    \end{minipage}
+\end{figure*}
+
+\begin{figure*}[ht]
+    \centering
+    \begin{minipage}[b]{0.49\textwidth}
+        \includegraphics[width=\textwidth]{illustrations/ROC_DeepFool_dfz.png}
+        \caption{ROC curve for DeepFool attack on DFZ}
+        \label{fig:roc_deepfool_dfz}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[b]{0.49\textwidth}
+        \includegraphics[width=\textwidth]{illustrations/ROC_DeepFool_gfz.png}
+        \caption{ROC curve for DeepFool attack on GFZ}
+        \label{fig:roc_deepfool_gfz}
+    \end{minipage}
+\end{figure*}
 
 %%%%%%%%% REFERENCES
 {\small

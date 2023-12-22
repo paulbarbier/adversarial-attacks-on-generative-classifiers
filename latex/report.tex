@@ -175,17 +175,17 @@ The Carlini and Wagner attack has demonstrated its effectiveness in generating a
 
 \paragraph{}
 
-Black box attacks involve scenarios where attackers only have access to a model's inputs and can inquire about output labels or confidence scores. To assess how well a model withstands black-box attacks, we used a method called Zeroth Order Optimization (ZOO), proposed by Chen et al. \cite{Chen_2017}. ZOO estimates the gradients of the targeted model and uses efficient optimization techniques for attacking black-box models.
+Black box attacks involve scenarios where attackers only have access to a model's inputs and can query output labels or confidence scores. To assess how well a model withstands black-box attacks, we used a method called Zeroth Order Optimization (ZOO), proposed by Chen et al. \cite{Chen_2017}. ZOO estimates the gradients of the targeted model and uses efficient optimization techniques for attacking black-box models.
 This approach is inspired by the formulation of the Carlini and Wagner white box attack \cite{robustness}.
 In \cite{Chen_2017}, the authors proposed a hinge loss based on the output F of the model :
 \begin{align*}
-    f(x,t) = \max \{log[F(x)]_{t_0} - \max_{i \neq t}log[Z(x)]_i, -\kappa \}
+    f(x,t) = \max \{log[F(x)]_{t_0} - \max_{i \neq t}log[F(x)]_i, -\kappa \}
 \end{align*}
 The gradients are then estimated simply using finite differences:
 \begin{align*}
     \frac{\partial f}{\partial x_i} = \frac{f(x + \epsilon e_i) - f(x - \epsilon e_i)}{2 \epsilon}
 \end{align*}
-As an untargeted attacks are easier to evaluate the general robustness of the model, we chose this implementation for our experiments. The original article proposed many optimisation algorithms, but they observed better results when using coordinate wise ADAM optimizer, thus, we implemented this method. As for the box constraints, we simply clipped the coordinates to be in the box after each iteration.
+As untargeted attacks are easier to evaluate the general robustness of the model, we chose this implementation for our experiments. The original article proposed many optimisation algorithms, but they observed better results when using coordinate wise ADAM optimizer, thus, we implemented this method. As for the box constraints, we simply clipped the coordinates to be in the box after each iteration.
 
 \subsection{Attacks detection}
 

@@ -78,7 +78,7 @@ def attack_and_detect(flags):
       )
 
       false_positives_batch = detection.detect_attack(
-        thresholds, original_logits, y_batch
+        thresholds, original_logits, jnp.argmax(original_logits, axis=1) == y_batch
       )
       metrics["false_positive_rates"].append(false_positives_batch)
 

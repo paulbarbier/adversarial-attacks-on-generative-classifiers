@@ -31,14 +31,15 @@ def compute_logits_stats(key, train_dl, model_data):
 
 def compute_thresholds(key, train_dl, model_data, detection_config):
     key, mean, std = compute_logits_stats(key, train_dl, model_data)
-
+    #mean = jnp.array([-24.33834, -18.135244, -25.215567, -23.10547, -23.98976, -29.77989, -24.763746, -19.915398, -32.417736, -25.16749 ])
+    #std = jnp.array([11.683408, 7.5450306, 10.173785, 8.143838, 8.382208, 12.364738, 10.698284, 6.7997694, 10.692102, 8.642754 ])
     print(f"mean: \n{mean}\n std: \n{std}")
 
     alpha = jnp.linspace(-detection_config.alpha, detection_config.alpha, detection_config.num_thresholds)
     threshold = mean[None, :] - alpha[:, None] * std[None, :]
     return key, threshold
 
-#@jax.jit
+@jax.jit
 def detect_attack(thresholds, logits, y_true = None):
     def single_detection(threshold, logits):
         label = jnp.argmax(logits)
@@ -54,4 +55,4 @@ def detect_attack(thresholds, logits, y_true = None):
         return jnp.mean(detections, axis=1)
     else:
         indices = y_true == jnp.argmax(logits, axis=1)
-        return jnp.mean(detections, where=indices, axis=1)
+        return jnp.mean(detections, where=indices[None, :], axis=1)

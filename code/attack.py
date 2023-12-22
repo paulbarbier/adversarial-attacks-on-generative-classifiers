@@ -86,8 +86,8 @@ def attack(flags):
         jnp.mean(corrupted_indices)
       )
       tattack.set_postfix(
-        success_rate=metrics["attack_success_rate"][-1],
-        mean_perturbation_norm=jnp.mean(metrics["pertubation_norms"][-1]),
+        success_rate=np.mean(metrics["pertubation_norms"]),
+        perturbation_norm=np.mean(metrics["attack_success_rate"]),
       )
   
   metrics["pertubation_norms"] = np.mean(metrics["pertubation_norms"])

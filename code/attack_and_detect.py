@@ -116,8 +116,8 @@ def attack_and_detect(flags):
       )
       tattack.set_postfix(
         detection_rate_at_5_pc=metrics["detection_rate_at_5_pc"][-1],
-        success_rate=metrics["attack_success_rate"][-1],
-        mean_perturbation_norm=jnp.mean(metrics["pertubation_norms"][-1]),
+        success_rate=np.mean(metrics["attack_success_rate"]),
+        perturbation_norm=np.mean(metrics["pertubation_norms"]),
       )
 
   metrics["true_positive_rates"] = jnp.stack(metrics["true_positive_rates"], axis=1)
@@ -127,7 +127,6 @@ def attack_and_detect(flags):
 
   metrics["pertubation_norms"] = np.mean(metrics["pertubation_norms"])
   metrics["attack_success_rate"] = np.mean(metrics["attack_success_rate"])
-  metrics["detection_rate_at_5_pc"]= np.mean(metrics["detection_rate_at_5_pc"])
 
   keys = ["pertubation_norms", "attack_success_rate", "detection_rate_at_5_pc"]
 

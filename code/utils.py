@@ -72,7 +72,8 @@ def get_attack_model(config: ConfigDict):
 
 @jax.jit
 def perturbation_norm(truth, perturbated, indices = None):
-    delta = jnp.sum((truth - perturbated)**2, axis=(1, 2, 3), where=indices)
-    perturbation = delta / jnp.sum(truth**2, axis=(1, 2, 3), where=indices)
-    perturbation = jnp.sqrt(perturbation)
-    return perturbation
+    truth = truth.squeeze()
+    perturbated = perturbated.squeeze()
+    pert_norm = jnp.linalg.norm(truth - perturbated, axis=(1, 2)) / jnp.linalg.norm(truth, axis=(1, 2))
+    pert_norm = jnp.mean(pert_norm, where=indices)
+    return pert_norm

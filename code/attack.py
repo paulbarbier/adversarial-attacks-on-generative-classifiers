@@ -89,7 +89,7 @@ def attack(flags):
       # return
 
       metrics["pertubation_norms"].append(
-        jnp.mean(perturbation_norm(X_batch, X_corrupted_batch, corrupted_indices))
+        perturbation_norm(X_batch, X_corrupted_batch, corrupted_indices)
       )
       metrics["attack_success_rate"].append(
         jnp.mean(corrupted_indices)

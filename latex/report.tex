@@ -180,23 +180,25 @@ Obviously, this algorithm is more expensive to run than the FGS method (since it
 \paragraph{}
 Carlini and Wagner proposed another attack \cite{robustness} that gained a lot of popularity. It is a regularization based attack that introduced some modifications to the previously mentioned optimization problem \ref{pb:gen} as an attempt to improve its formulation.
 
-Given an image $x_0$, the goal is to find an adversarial example $x$ similar to $x_0$ while having a specific label t distinct from the original label. The attack is formulated as an optimization problem, seeking to minimize a combination of two objectives:
+Given an image $\bm{x}_0$, the goal is to find an adversarial example $\bm{x}$ similar to $\bm{x}_0$ while having a specific label $t$ distinct from the original label. The attack is formulated as an optimization problem, seeking to minimize a combination of two objectives:
 \begin{align*}
-   \min_x &\ ||x - x_0||_2^2 + c \times f(x,t) %\\
-    % \text{s.t } &\ \ x \in [0,1]^p
-\end{align*}
-The first term enforces similarity between the original image and the corrupted one. The second term $ c \times f(x,t) $ is the loss function that reflects the level of unsuccessful attacks, and t is the target class. Carlini and Wagner suggested the following loss function for targeted attacks:
-\begin{align*}
-    f(x,t) = \max \{ \max_{i \neq t}[Z(x)]_i - [Z(x)]_t, -\kappa \}
-\end{align*}
-Where $Z(x) \in \mathbb{R}^K$ are the logits. 
-This loss function can be adapted for untargeted attacks, where the objective is to find the closest perturbation that changes the original label:
-\begin{align*}
-    f(x,t) = \max \{[Z(x)]_{t_0} - \max_{i \neq t}[Z(x)]_i, -\kappa \}
+   \min_{\bm{x}} &\ ||\bm{x} - \bm{x}_0||_2^2 + c \times f(\bm{x}, t) \\
+     \text{s.t } &\ \ \bm{x} \in [0,1]^p
 \end{align*}
 
-The optimization problem includes the constraint $ x \in [0,1]^p $, ensuring that the perturbed image lies within a valid pixel range. To address this constraint, Carlini and Wagner introduced a change of variable from $x$ to $\frac{1}{2} (1 + \tanh(w))$. 
-This ensures that the perturbed values are always within the $(0,1)$ range.
+The first term enforces similarity between the original image and the corrupted one. The second term $ c \times f(\bm{x}, t)$ is the loss function that reflects the level of unsuccessful attacks, and $t$ is the target class. Carlini and Wagner suggested the following loss function for targeted attacks:
+
+\begin{align*}
+    f(\bm{x}, t) = \max \{ \max_{i \neq t}[Z(\bm{x})]_i - [Z(\bm{x})]_t, -\kappa \}
+\end{align*}
+where $Z(\bm{x}) \in \mathbb{R}^K$ are the logits. 
+This loss function can be adapted for untargeted attacks, where the objective is to find the closest perturbation that changes the original label:
+\begin{align*}
+    f(\bm{x}, t) = \max \{[Z(\bm{x})]_{t_0} - \max_{i \neq t}[Z(\bm{x})]_i, -\kappa \}
+\end{align*}
+
+The optimization problem includes the constraint $\bm{x} \in [0,1]^p $, ensuring that the perturbed image lies within a valid pixel range. To address this constraint, Carlini and Wagner introduced a change of variable from $\bm{x}$ to $\frac{1}{2} (1 + \tanh(\bm{w}))$.  This ensures that the perturbed values are always within the $(0,1)$ range.
+
 The Carlini and Wagner attack has demonstrated its effectiveness in generating adversarial examples that are highly transferable across different models and architectures. The attack is notable for its ability to find minimal perturbations while maintaining high success rates.
 
 \subsection{Black box attacks}
@@ -205,15 +207,17 @@ The Carlini and Wagner attack has demonstrated its effectiveness in generating a
 
 Black box attacks involve scenarios where attackers only have access to a model's inputs and can query output labels or confidence scores. To assess how well a model withstands black-box attacks, we used a method called Zeroth Order Optimization (ZOO), proposed by Chen et al. \cite{Chen_2017}. ZOO estimates the gradients of the targeted model and uses efficient optimization techniques for attacking black-box models.
 This approach is inspired by the formulation of the Carlini and Wagner white box attack \cite{robustness}.
-In \cite{Chen_2017}, the authors proposed a hinge loss based on the output F of the model :
+In \cite{Chen_2017}, the authors proposed a hinge loss based on the output F of the model:
+
 \begin{align*}
-    f(x,t) = \max \{log[F(x)]_{t_0} - \max_{i \neq t}log[F(x)]_i, -\kappa \}
+    f(\bm{x}, t) = \max \{\log[F(\bm{x})]_{t_0} - \max_{i \neq t}\log[F(\bm{x})]_i, -\kappa \}
 \end{align*}
 The gradients are then estimated simply using finite differences:
 \begin{align*}
-    \frac{\partial f}{\partial x_i} = \frac{f(x + \epsilon e_i) - f(x - \epsilon e_i)}{2 \epsilon}
+    \frac{\partial f}{\partial \bm{x}_i} = \frac{f(\bm{x} + \epsilon \bm{e}_i) - f(x - \epsilon \bm{e}_i)}{2 \epsilon}
 \end{align*}
-As untargeted attacks are easier to evaluate the general robustness of the model, we chose this implementation for our experiments. The original article proposed many optimisation algorithms, but they observed better results when using coordinate wise ADAM optimizer, thus, we implemented this method. As for the box constraints, we simply clipped the coordinates to be in the box after each iteration.
+
+As untargeted attacks make more sense to evaluate the general robustness of the model, we chose this implementation for our experiments. The original article proposed many optimisation algorithms, but they observed better results when using coordinate wise ADAM optimizer, thus, we implemented this method. As for the box constraints, we simply clipped the coordinates to be in the box after each iteration.
 
 \subsection{Attacks detection}
 
@@ -250,7 +254,6 @@ Then, we computed the attack success rate as well as the robustness of our two m
 \paragraph{} Finally, we compared the detection rates of the generative classifier and the detection rates of the discriminative classifier. To obtain these results, we fixed a false-positive rate of 5\% and selected the value of $\alpha$ that ensured this false-positive rate. The results are displayed in \cref{tab:detection_rates}. As we can see, most of the FGS attacks are detected by both classifiers, which is a good sign. However, we still observe a performance gap between GFZ and DFZ, which confirms that the generative classifier is more robust to adversarial attacks than the discriminative one. Regarding the DeepFool attacks, those are much harder to detect, but we still observe a performance gap between GFZ and DFZ, which confirms our hypothesis.
 
 By selecting a wider range for the values of $\alpha$, we obtainted the ROC curves of each attack on each model, displayed in \cref{fig:roc_fgs_dfz}, \cref{fig:roc_fgs_gfz}, \cref{fig:roc_deepfool_dfz} and \cref{fig:roc_deepfool_gfz}. Those curves offers a more detailed view of the detection rates of each model, and still confirm our claims. In particular, we see that the area under the curve is larger for the generative classifier than for the discriminative one, for both attack strategies.
-
 
 \section{Conclusion}
 \label{sec:conclusion}

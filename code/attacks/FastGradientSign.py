@@ -31,7 +31,9 @@ def corrupt_batch(key, model, attack_config, X, y_true):
     @jax.vmap
     def pertubate(x, y, epsilon):
         grads = jax.grad(compute_single_loss)(x, y, epsilon)
-        return x + attack_config.eta * jnp.sign(grads)
+        pertubated = x + attack_config.eta * jnp.sign(grads)
+        pertubated = jnp.clip(pertubated, 0.0, 1.0)
+        return pertubated
 
     epsilon_shape = (X.shape[0], model_config.d_latent)
     key, epsilon = sample_gaussian(key, epsilon_shape) 

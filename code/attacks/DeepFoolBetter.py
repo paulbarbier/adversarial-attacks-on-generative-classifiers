@@ -51,6 +51,7 @@ def corrupt_batch(key, model, attack_config, X, y_true):
     def perturbate(indices, X, epsilon):
         perturbation = pertubation_step(X, epsilon[0])
         X = jnp.where(indices[:, None, None, None], X + perturbation, 0.0)
+        X = jnp.clip(X, 0.0, 1.0)
 
         y_corrupted = classifier.make_deterministic_predictions(
             model_config, params, log_likelihood, X, y_probe, epsilon[1]

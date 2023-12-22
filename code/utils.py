@@ -70,6 +70,9 @@ def get_attack_model(config: ConfigDict):
         raise NotImplementedError(config.attack_name)
     return attack_model
 
-@jax.vmap
-def perturbation_norm(truth, predicted):
-    return jnp.linalg.norm(truth - predicted) / jnp.linalg.norm(truth)
+@jax.jit
+def perturbation_norm(truth, perturbated, indices = None):
+    delta = jnp.sum((truth - perturbated)**2, axis=(1, 2, 3), where=indices)
+    perturbation = delta / jnp.sum(truth**2, axis=(1, 2, 3), where=indices)
+    perturbation = jnp.sqrt(perturbation)
+    return perturbation

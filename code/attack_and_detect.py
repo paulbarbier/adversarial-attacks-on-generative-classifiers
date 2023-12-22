@@ -127,6 +127,13 @@ def attack_and_detect(flags):
 
   metrics["pertubation_norms"] = np.mean(metrics["pertubation_norms"])
   metrics["attack_success_rate"] = np.mean(metrics["attack_success_rate"])
+  metrics["detection_rate_at_5_pc"]= np.mean(metrics["detection_rate_at_5_pc"])
+
+  keys = ["pertubation_norms", "attack_success_rate", "detection_rate_at_5_pc"]
+
+  print("Detection results:")
+  for key in keys:
+    print(f"{key}: {metrics[key]}")
 
   checkpointer = ocp.PyTreeCheckpointer()
   checkpoint_name = flags.checkpoint_name

@@ -32,6 +32,8 @@ def compute_logits_stats(key, train_dl, model_data):
 def compute_thresholds(key, train_dl, model_data, detection_config):
     key, mean, std = compute_logits_stats(key, train_dl, model_data)
 
+    print(f"mean: \n{mean}\n std: \n{std}")
+
     alpha = jnp.linspace(-detection_config.alpha, detection_config.alpha, detection_config.num_thresholds)
     threshold = mean[None, :] - alpha[:, None] * std[None, :]
     return key, threshold

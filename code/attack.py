@@ -1,4 +1,5 @@
 from jax import random
+from matplotlib import pyplot as plt
 from ml_collections import ConfigDict, config_flags
 from tqdm import tqdm
 
@@ -76,6 +77,16 @@ def attack(flags):
       )
 
       corrupted_indices = y_pred_batch != y_batch
+
+      # batch_size = X_batch.shape[0]
+      # fig, ax = plt.subplots(2, batch_size, figsize=(20, 5))
+      # for i in range(batch_size):
+      #   ax[0, i].imshow(X_batch[i].squeeze(), cmap="gray")
+      #   ax[1, i].imshow(X_corrupted_batch[i].squeeze(), cmap="gray")
+      #   perturbation_norm = np.linalg.norm(X_corrupted_batch[i] - X_batch[i]) / np.linalg.norm(X_batch[i])
+      #   ax[1, i].set_title(f"success {corrupted_indices[i]}") #, pert: {perturbation_norm:.4f}")
+      # plt.savefig("corrupted.png")
+      # return
 
       metrics["pertubation_norms"].append(
         jnp.mean(perturbation_norm(X_batch, X_corrupted_batch, corrupted_indices))

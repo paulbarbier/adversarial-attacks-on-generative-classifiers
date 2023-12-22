@@ -125,6 +125,7 @@ In all cases, we aim to design attacks which are as imperceptible as possible to
 & \text{s.t.} 
 & & \underset{\bm{y} \in \mathcal{Y}}{\text{argmax }}(p(\bm{y}|\bm{x} + \bm{\eta})) \neq \underset{\bm{y} \in \mathcal{Y}}{\text{argmax }}p(\bm{y}|\bm{x}) \\
 \end{aligned}
+\label{pb:gen}
 \end{equation*}
 
 where $\bm{\eta}$ is the adversarial perturbation, $\bm{x}$ is the original sample, and $p(\bm{y}|\bm{x})$ is the conditional probability of the label $\bm{y}$ given the sample $\bm{x}$. Note that as we are considering a multiclass classification problem, we will implement the different attacks as one-vs-all attacks, \textit{i.e.} we will create adversarial examples to change the prediction of the model for each class independently.
@@ -150,12 +151,12 @@ Obviously, this algorithm is more expensive to run than the FGS method (since it
 
 \subsubsection{Carlini and Wagner attack}
 \paragraph{}
-The Carlini and Wagner attack \cite{robustness}is a regularization based attack that introduced some modification as an attempt to improve the formulation of the optimization attack problem and resolve the box constraints issues.
+Carlini and Wagner proposed another attack \cite{robustness} that gained a lot of popularity. It is a regularization based attack that introduced some modifications to the previously mentioned optimization problem \ref{pb:gen} as an attempt to improve its formulation.
 
 Given an image $x_0$, the goal is to find an adversarial example $x$ similar to $x_0$ while having a specific label t distinct from the original label. The attack is formulated as an optimization problem, seeking to minimize a combination of two objectives:
 \begin{align*}
-   \min_x &\ ||x - x_0||_2^2 + c \times f(x,t) \\
-    \text{s.t } &\ \ x \in [0,1]^p
+   \min_x &\ ||x - x_0||_2^2 + c \times f(x,t) %\\
+    % \text{s.t } &\ \ x \in [0,1]^p
 \end{align*}
 The first term enforces similarity between the original image and the corrupted one. The second term $ c \times f(x,t) $ is the loss function that reflects the level of unsuccessful attacks, and t is the target class. Carlini and Wagner suggested the following loss function for targeted attacks:
 \begin{align*}
@@ -167,7 +168,8 @@ This loss function can be adapted for untargeted attacks, where the objective is
     f(x,t) = \max \{[Z(x)]_{t_0} - \max_{i \neq t}[Z(x)]_i, -\kappa \}
 \end{align*}
 
-Moreover, Carlini and Wagner proposed a better formulation for the box constraints. They proposed a change of variable from x to $\frac{1}{2} (\tanh(w) + 1)$ to ensure that the values are always contained in the the $(0,1)$ box.
+The optimization problem includes the constraint $ x \in [0,1]^p $, ensuring that the perturbed image lies within a valid pixel range. To address this constraint, Carlini and Wagner introduced a change of variable from $x$ to $\frac{1}{2} (1 + \tanh(w))$. 
+This ensures that the perturbed values are always within the $(0,1)$ range.
 The Carlini and Wagner attack has demonstrated its effectiveness in generating adversarial examples that are highly transferable across different models and architectures. The attack is notable for its ability to find minimal perturbations while maintaining high success rates.
 \subsection{Black box attacks}
 

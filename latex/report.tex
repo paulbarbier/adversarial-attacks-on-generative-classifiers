@@ -151,7 +151,30 @@ This method is very simple to implement, and cheap to run (since it only require
 The idea behind it is to iteratively compute the minimal perturbation $\bm{\eta}$ which is required to change the prediction of the model. More precisely, let us consider a model with a model loss function $J_{\theta}$ and a sample $(\bm{x}, \bm{y})$. The DeepFool algorithm consists in iteratively computing the minimal perturbation $\bm{\eta}$ which is required to change the prediction of the model, with $\bm{\eta} = \dfrac{J_{\theta}(\bm{x}, \bm{y})}{\|\bm{\nabla}_{\bm{x}} J_{\theta}(\bm{x}, \bm{y})\|_2^2} \bm{\nabla}_{\bm{x}} J_{\theta}(\bm{x}, \bm{y})$. 
 
 The idea comes from the fact that, if the model is linear, the decision boundary is a hyperplane of equation $\bm{w}^T\bm{x} + b = 0$, and the minimal perturbation required to change the prediction of the model is the orthogonal projection of the sample on the decision boundary, \textit{i.e.} $\bm{\eta} = - \dfrac{\text{sign}(\bm{w}^T\bm{x} + b)}{||\bm{w}||_2^2} \bm{w}$. In the non-linear case, the decision boundary is not a hyperplane anymore, but this heuristic still works well in practice. More precisely, our implementation of the DeepFool algorithm is described in \ref{algo:deepfool} (where we can chose another p-norm to optimise on, even if in practice we mostly focused on the case $p=2$).
+
 Obviously, this algorithm is more expensive to run than the FGS method (since it requires several gradient computations), but it is also more efficient since it creates smaller perturbations.
+
+\begin{algorithm}
+    \SetAlgoLined
+    \KwInput{$f_{\theta}$, $\bm{x}$, $\bm{y}$, $p > 1$}    \KwOutput{$\bm{\eta}$}
+    $q \leftarrow \frac{p}{p-1}$ \\
+    $i \leftarrow 0$ \\
+    $\bm{\eta} \leftarrow 0$ \\
+    $\bm{x}_0 \leftarrow \bm{x}$ \\
+    \While{$\underset{k}{\text{argmax }} f_k(x) = y$}{
+        $i \leftarrow i + 1$ \\
+        \For{$k \neq y$}{
+            $\bm{w}_k \leftarrow \bm{\nabla}_{\bm{x}} f_k(\bm{x}_i) - \bm{\nabla}_{\bm{x}} f_y(\bm{x}_i)$ \\
+            $\delta_k \leftarrow f_k(\bm{x}_i) - f_y(\bm{x}_i)$ \\
+        }
+        $l \leftarrow \underset{k \neq y}{\text{argmin }} \frac{|\delta_k|}{||\bm{w}_k||_q}$ \\
+        $\bm{\eta}_i \leftarrow \frac{|\delta_l|}{||\bm{w}_l||_q^q} |\bm{w}_l|^{q-1} \times \text{sign}(\bm{w}_l)$ \\
+        $\bm{x}_{i+1} \leftarrow \bm{x}_i + \bm{\eta}_i$ \\
+        $\bm{\eta} \leftarrow \bm{\eta} + \bm{\eta}_i$ \\
+    }
+    \caption{DeepFool algorithm}
+    \label{algo:deepfool}
+\end{algorithm}
 
 \subsubsection{Carlini and Wagner attack}
 \paragraph{}
@@ -175,6 +198,7 @@ This loss function can be adapted for untargeted attacks, where the objective is
 The optimization problem includes the constraint $ x \in [0,1]^p $, ensuring that the perturbed image lies within a valid pixel range. To address this constraint, Carlini and Wagner introduced a change of variable from $x$ to $\frac{1}{2} (1 + \tanh(w))$. 
 This ensures that the perturbed values are always within the $(0,1)$ range.
 The Carlini and Wagner attack has demonstrated its effectiveness in generating adversarial examples that are highly transferable across different models and architectures. The attack is notable for its ability to find minimal perturbations while maintaining high success rates.
+
 \subsection{Black box attacks}
 
 \paragraph{}
@@ -239,30 +263,17 @@ To conclude, we can say that our experiments lead us to believe that generative 
 
 Finally, all of our code is available on \href{https://github.com/paulbarbier/adversarial-attacks-on-generative-classifiers}{GitHub}, and aims to be easily reusable in an open-source context.
 
+\quad
+\newpage 
+\newpage
+%%%%%%%%% REFERENCES
+{\small
+\bibliographystyle{acm}
+\bibliography{biblio}
+}
+
 \section{Appendix}
 \label{sec:appendix}
-
-\begin{algorithm}
-    \SetAlgoLined
-    \KwInput{$f_{\theta}$, $\bm{x}$, $\bm{y}$, $p > 1$}    \KwOutput{$\bm{\eta}$}
-    $q \leftarrow \frac{p}{p-1}$ \\
-    $i \leftarrow 0$ \\
-    $\bm{\eta} \leftarrow 0$ \\
-    $\bm{x}_0 \leftarrow \bm{x}$ \\
-    \While{$\underset{k}{\text{argmax }} f_k(x) = y$}{
-        $i \leftarrow i + 1$ \\
-        \For{$k \neq y$}{
-            $\bm{w}_k \leftarrow \bm{\nabla}_{\bm{x}} f_k(\bm{x}_i) - \bm{\nabla}_{\bm{x}} f_y(\bm{x}_i)$ \\
-            $\delta_k \leftarrow f_k(\bm{x}_i) - f_y(\bm{x}_i)$ \\
-        }
-        $l \leftarrow \underset{k \neq y}{\text{argmin }} \frac{|\delta_k|}{||\bm{w}_k||_q}$ \\
-        $\bm{\eta}_i \leftarrow \frac{|\delta_l|}{||\bm{w}_l||_q^q} |\bm{w}_l|^{q-1} \times \text{sign}(\bm{w}_l)$ \\
-        $\bm{x}_{i+1} \leftarrow \bm{x}_i + \bm{\eta}_i$ \\
-        $\bm{\eta} \leftarrow \bm{\eta} + \bm{\eta}_i$ \\
-    }
-    \caption{DeepFool algorithm}
-    \label{algo:deepfool}
-\end{algorithm}
 
 \begin{table*}[ht]
     \centering
@@ -278,7 +289,6 @@ Finally, all of our code is available on \href{https://github.com/paulbarbier/ad
     \caption{Comparison of classification performances (on test and validation set) of our classifiers}
     \label{tab:classification_performances}
 \end{table*}
-
 
 \begin{table*}[ht]
     \centering
@@ -383,11 +393,5 @@ Finally, all of our code is available on \href{https://github.com/paulbarbier/ad
         \label{fig:roc_deepfool_gfz}
     \end{minipage}
 \end{figure*}
-
-%%%%%%%%% REFERENCES
-{\small
-\bibliographystyle{acm}
-\bibliography{biblio}
-}
 
 \end{document}

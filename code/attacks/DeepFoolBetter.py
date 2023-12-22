@@ -42,29 +42,30 @@ def corrupt_batch(key, model, attack_config, X, y_true):
         r = perturbation[idx] * w[idx] / w_norm[idx]
         return attack_config.learning_rate * r
     
+    # compute predictions to prevent label leakage
+    key, labels = classifier.make_predictions(
+        key, model_config, params, log_likelihood, X
+    )
+    
     @jax.jit
     def perturbate(indices, X, epsilon):
         perturbation = pertubation_step(X, epsilon[0])
-        X = X + jnp.where(indices[:, None, None, None], perturbation, 0.0)
+        X = jnp.where(indices[:, None, None, None], X + perturbation, 0.0)
 
         y_corrupted = classifier.make_deterministic_predictions(
             model_config, params, log_likelihood, X, y_probe, epsilon[1]
         )
 
-        indices = indices * (y_corrupted == y_true)
+        indices = indices * (y_corrupted == labels)
         return X, indices
 
     X_corrupted = jnp.copy(X)
     epsilon_shape = (model_config.n_classes * K, model_config.d_latent)
 
-    key, y_corrupted = classifier.make_predictions(
-        key, model_config, params, log_likelihood, X_corrupted
-    )
-    target_indices = y_corrupted == y_corrupted 
-    
+    target_indices = jnp.ones_like(labels, dtype=bool)  
     iteration = 0
     while jnp.any(target_indices) and iteration < attack_config.max_iter:
-        key, epsilon = sample_gaussian(key, (2, X.shape[0],) + epsilon_shape, dtype)
+        key, epsilon = sample_gaussian(key, (2, X.shape[0]) + epsilon_shape, dtype)
         X_corrupted, target_indices = perturbate(target_indices, X_corrupted, epsilon)
         iteration += 1
     

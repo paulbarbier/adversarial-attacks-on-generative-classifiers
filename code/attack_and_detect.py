@@ -116,7 +116,7 @@ def attack_and_detect(flags):
       )
       tattack.set_postfix(
         detection_rate_at_5_pc=metrics["detection_rate_at_5_pc"][-1],
-        success_rate=np.mean(metrics["attack_success_rate"]),
+        attack_success_rate=np.mean(metrics["attack_success_rate"]),
         perturbation_norm=np.mean(metrics["pertubation_norms"]),
       )
 
@@ -129,7 +129,6 @@ def attack_and_detect(flags):
   metrics["attack_success_rate"] = np.mean(metrics["attack_success_rate"])
 
   keys = ["pertubation_norms", "attack_success_rate", "detection_rate_at_5_pc"]
-
   print("Detection results:")
   for key in keys:
     print(f"{key}: {metrics[key]}")

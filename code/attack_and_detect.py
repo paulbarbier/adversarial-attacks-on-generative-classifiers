@@ -94,9 +94,10 @@ def attack_and_detect(flags):
       test_key, attacked_logits = classifier.compute_logits(
         test_key, model_config, params, log_likelihood_fn, X_corrupted_batch
       )
+      corrupted_indices = jnp.argmax(attacked_logits, axis=1) != y_batch
 
       true_positives_batch = detection.detect_attack(
-        thresholds, attacked_logits
+        thresholds, attacked_logits, corrupted_indices
       )
       metrics["true_positive_rates"].append(true_positives_batch)
 
@@ -104,7 +105,6 @@ def attack_and_detect(flags):
         jnp.max(true_positives_batch[false_positives_batch < 0.05])
       )
       
-      corrupted_indices = jnp.argmax(attacked_logits, axis=1) != y_batch
       metrics["pertubation_norms"].append(
         perturbation_norm(X_batch, X_corrupted_batch, corrupted_indices)
       )

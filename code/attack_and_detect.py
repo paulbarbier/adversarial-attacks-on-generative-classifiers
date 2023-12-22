@@ -106,15 +106,15 @@ def attack_and_detect(flags):
       
       corrupted_indices = jnp.argmax(attacked_logits, axis=1) != y_batch
       metrics["pertubation_norms"].append(
-        jnp.mean(perturbation_norm(X_batch, X_corrupted_batch))
+        perturbation_norm(X_batch, X_corrupted_batch, corrupted_indices)
       )
       metrics["attack_success_rate"].append(
         jnp.mean(corrupted_indices)
       )
-      
+
       tattack.set_postfix(
-        detection_rate_at_5_pc=metrics["detection_rate_at_5_pc"][-1],
-        attack_success_rate=np.mean(metrics["attack_success_rate"]),
+        attack_success=np.mean(metrics["attack_success_rate"]),
+        detect_rate5=metrics["detection_rate_at_5_pc"][-1],
         perturbation_norm=np.mean(metrics["pertubation_norms"]),
       )
 

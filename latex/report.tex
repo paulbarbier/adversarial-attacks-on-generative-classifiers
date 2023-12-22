@@ -148,31 +148,42 @@ The idea behind it is to iteratively compute the minimal perturbation $\bm{\eta}
 The idea comes from the fact that, if the model is linear, the decision boundary is a hyperplane of equation $\bm{w}^T\bm{x} + b = 0$, and the minimal perturbation required to change the prediction of the model is the orthogonal projection of the sample on the decision boundary, \textit{i.e.} $\bm{\eta} = - \dfrac{\text{sign}(\bm{w}^T\bm{x} + b)}{||\bm{w}||_2^2} \bm{w}$. In the non-linear case, the decision boundary is not a hyperplane anymore, but this heuristic still works well in practice. More precisely, our implementation of the DeepFool algorithm is described in \ref{algo:deepfool} (where we can chose another p-norm to optimise on, even if in practice we mostly focused on the case $p=2$).
 Obviously, this algorithm is more expensive to run than the FGS method (since it requires several gradient computations), but it is also more efficient since it creates smaller perturbations.
 
+\subsubsection{Carlini and Wagner attack}
+\paragraph{}
+The Carlini and Wagner attack \cite{robustness}is a regularization based attack that introduced some modification as an attempt to improve the formulation of the optimization attack problem and resolve the box constraints issues.
+
+Given an image $x_0$, the goal is to find an adversarial example $x$ similar to $x_0$ while having a specific label t distinct from the original label. The attack is formulated as an optimization problem, seeking to minimize a combination of two objectives:
+\begin{align*}
+   \min_x &\ ||x - x_0||_2^2 + c \times f(x,t) \\
+    \text{s.t } &\ \ x \in [0,1]^p
+\end{align*}
+The first term enforces similarity between the original image and the corrupted one. The second term $ c \times f(x,t) $ is the loss function that reflects the level of unsuccessful attacks, and t is the target class. Carlini and Wagner suggested the following loss function for targeted attacks:
+\begin{align*}
+    f(x,t) = \max \{ \max_{i \neq t}[Z(x)]_i - [Z(x)]_t, -\kappa \}
+\end{align*}
+Where $Z(x) \in \mathbb{R}^K$ are the logits. 
+This loss function can be adapted for untargeted attacks, where the objective is to find the closest perturbation that changes the original label:
+\begin{align*}
+    f(x,t) = \max \{[Z(x)]_{t_0} - \max_{i \neq t}[Z(x)]_i, -\kappa \}
+\end{align*}
+
+Moreover, Carlini and Wagner proposed a better formulation for the box constraints. They proposed a change of variable from x to $\frac{1}{2} (\tanh(w) + 1)$ to ensure that the values are always contained in the the $(0,1)$ box.
+The Carlini and Wagner attack has demonstrated its effectiveness in generating adversarial examples that are highly transferable across different models and architectures. The attack is notable for its ability to find minimal perturbations while maintaining high success rates.
 \subsection{Black box attacks}
 
 \paragraph{}
 
 Black box attacks involve scenarios where attackers only have access to a model's inputs and can inquire about output labels or confidence scores. To assess how well a model withstands black-box attacks, we used a method called Zeroth Order Optimization (ZOO), proposed by Chen et al. \cite{Chen_2017}. ZOO estimates the gradients of the targeted model and uses efficient optimization techniques for attacking black-box models.
-This approach is inspired by the formulation of the Carlini and Wagner white box attack \cite{robustness}. Given an image $x_0$, the goal is to find an adversarial example $x$ similar to $x_0$ while having a specific label t distinct from the original label. This is formulated as the following problem:
-\begin{align}
-   \min_x &\ ||x - x_0||_2^2 + c \times f(x,t) \\
-    \text{s.t } &\ \ x \in [0,1]^p
-\end{align}
-The first term enforces similarity between the original image and the corrupted one. The second term $ c \times f(x,t) $ is the loss function that reflects the level of unsuccessful attacks, and t is the target class. Carlini and Wagner suggested the following loss function for targeted attacks:
-\begin{align}
-    f(x,t) = \max \{ \max_{i \neq t}[Z(x)]_i - [Z(x)]_t, -\kappa \}
-\end{align}
-Where $Z(x) \in \mathbb{R}^K$ are the logits. 
-This loss function can be adapted for untargeted attacks, where the objective is to find the closest perturbation that changes the original label:
-\begin{align}
-    f(x,t) = \max \{[Z(x)]_{t_0} - \max_{i \neq t}[Z(x)]_i, -\kappa \}
-\end{align}
+This approach is inspired by the formulation of the Carlini and Wagner white box attack \cite{robustness}.
 In \cite{Chen_2017}, the authors proposed a hinge loss based on the output F of the model :
-\begin{align}
+\begin{align*}
     f(x,t) = \max \{log[F(x)]_{t_0} - \max_{i \neq t}log[Z(x)]_i, -\kappa \}
-\end{align}
-
-As an untargeted attacks are easier to evaluate the general robustness of the model, we chose this implementation for our experiments. The original article proposed many optimisation algorithms, but they observed better results when using coordinate wise ADAM optimizer so we implemented this method. As for the box constraints, we simply clipped the coordinates to be in the box after each iteration.
+\end{align*}
+The gradients are then estimated simply using finite differences:
+\begin{align*}
+    \frac{\partial f}{\partial x_i} = \frac{f(x + \epsilon e_i) - f(x - \epsilon e_i)}{2 \epsilon}
+\end{align*}
+As an untargeted attacks are easier to evaluate the general robustness of the model, we chose this implementation for our experiments. The original article proposed many optimisation algorithms, but they observed better results when using coordinate wise ADAM optimizer, thus, we implemented this method. As for the box constraints, we simply clipped the coordinates to be in the box after each iteration.
 
 \subsection{Attacks detection}
 

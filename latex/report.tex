@@ -150,7 +150,29 @@ Obviously, this algorithm is more expensive to run than the FGS method (since it
 
 \subsection{Black box attacks}
 
-\paragraph{} 
+\paragraph{}
+
+Black box attacks involve scenarios where attackers only have access to a model's inputs and can inquire about output labels or confidence scores. To assess how well a model withstands black-box attacks, we used a method called Zeroth Order Optimization (ZOO), proposed by Chen et al. \cite{Chen_2017}. ZOO estimates the gradients of the targeted model and uses efficient optimization techniques for attacking black-box models.
+This approach is inspired by the formulation of the Carlini and Wagner white box attack \cite{robustness}. Given an image $x_0$, the goal is to find an adversarial example $x$ similar to $x_0$ while having a specific label t distinct from the original label. This is formulated as the following problem:
+\begin{align}
+   \min_x &\ ||x - x_0||_2^2 + c \times f(x,t) \\
+    \text{s.t } &\ \ x \in [0,1]^p
+\end{align}
+The first term enforces similarity between the original image and the corrupted one. The second term $ c \times f(x,t) $ is the loss function that reflects the level of unsuccessful attacks, and t is the target class. Carlini and Wagner suggested the following loss function for targeted attacks:
+\begin{align}
+    f(x,t) = \max \{ \max_{i \neq t}[Z(x)]_i - [Z(x)]_t, -\kappa \}
+\end{align}
+Where $Z(x) \in \mathbb{R}^K$ are the logits. 
+This loss function can be adapted for untargeted attacks, where the objective is to find the closest perturbation that changes the original label:
+\begin{align}
+    f(x,t) = \max \{[Z(x)]_{t_0} - \max_{i \neq t}[Z(x)]_i, -\kappa \}
+\end{align}
+In \cite{Chen_2017}, the authors proposed a hinge loss based on the output F of the model :
+\begin{align}
+    f(x,t) = \max \{log[F(x)]_{t_0} - \max_{i \neq t}log[Z(x)]_i, -\kappa \}
+\end{align}
+
+As an untargeted attacks are easier to evaluate the general robustness of the model, we chose this implementation for our experiments. The original article proposed many optimisation algorithms, but they observed better results when using coordinate wise ADAM optimizer so we implemented this method. As for the box constraints, we simply clipped the coordinates to be in the box after each iteration.
 
 \subsection{Attacks detection}
 

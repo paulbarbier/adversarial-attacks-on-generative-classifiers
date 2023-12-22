@@ -4,7 +4,7 @@ def get_config():
   config = config_dict.ConfigDict()
 
   config.name = "logit"
-  config.alpha = 5.0
-  config.num_thresholds = 100
+  config.alpha = 10.0
+  config.num_thresholds = 10000
 
   return config
